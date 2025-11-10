@@ -1,22 +1,16 @@
+from argparse import ArgumentParser
+from omegaconf import OmegaConf
 from search_engine.engine import CodeSearchEngine
 
-# --- Configuration ---
-# Use a standard, non-fine-tuned model for the demo
-MODEL_NAME = "all-MiniLM-L6-v2"
-COLLECTION_NAME = "demo_code_collection"
-SAMPLE_CODE_DIR = "sample_code"
 
-
-def run_demo():
+def run_demo(code_dir, model_name, db_collection, db_path):
     print("--- Starting Code Search Demo ---")
 
     # Initialize the Search Engine
-    engine = CodeSearchEngine(
-        model_name=MODEL_NAME, collection_name=COLLECTION_NAME, storage_path="./qdrant_storage_demo"
-    )
+    engine = CodeSearchEngine(model_name=model_name, db_collection=db_collection, db_path=db_path)
 
     # Index the collection of documents
-    engine.index_from_directory(SAMPLE_CODE_DIR)
+    engine.index_from_directory(code_dir)
 
     # Define Test Queries
     test_queries = [
@@ -42,4 +36,12 @@ def run_demo():
 
 
 if __name__ == "__main__":
-    run_demo()
+    # Parse arguments and config file
+    parser = ArgumentParser()
+    parser.add_argument("--config", type=str, default="config/main_config.yaml")
+    parser.add_argument("--sample_code", type=str, default="sample_code")
+    args = parser.parse_args()
+    config = OmegaConf.load(args.config)
+
+    # Run demo
+    run_demo(args.sample_code, config.model_name, config.qdrant.collection, config.qdrant.storage_path)

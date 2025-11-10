@@ -11,18 +11,18 @@ class CodeSearchEngine:
     An embeddings-based search engine using Qdrant for vector storage.
     """
 
-    def __init__(self, model_name: str, collection_name: str, storage_path: str = "./qdrant_storage"):
+    def __init__(self, model_name: str, db_collection: str, db_path: str):
         """
         Initializes the search engine.
 
         Args:
             model_name (str): The name or path of the Hugging Face sentence-transformer model.
-            collection_name (str): The name of the Qdrant collection.
-            storage_path (str): The path for Qdrant's on-disk storage.
+            db_collection (str): The name of the Qdrant collection.
+            db_path (str): The path for Qdrant's on-disk storage.
         """
-        print(f"Initializing engine with model: {model_name} and collection: {collection_name}")
+        print(f"Initializing engine with model: {model_name} and collection: {db_collection}")
         self.model_name = model_name
-        self.collection_name = collection_name
+        self.db_collection = db_collection
 
         # Use HuggingFaceEmbeddings for compatibility with LangChain loaders
         self.embeddings_model = HuggingFaceEmbeddings(
@@ -35,7 +35,7 @@ class CodeSearchEngine:
         self.embedding_dim = self._sbert_model.get_sentence_embedding_dimension()
 
         # Initialize Qdrant client
-        self.qdrant_client = QdrantClient(path=storage_path)
+        self.qdrant_client = QdrantClient(path=db_path)
 
         # Create or recreate the collection
         self._create_collection()
@@ -46,10 +46,10 @@ class CodeSearchEngine:
         """
         try:
             self.qdrant_client.recreate_collection(
-                collection_name=self.collection_name,
+                collection_name=self.db_collection,
                 vectors_config=models.VectorParams(size=self.embedding_dim, distance=models.Distance.COSINE),
             )
-            print(f"Collection '{self.collection_name}' created successfully.")
+            print(f"Collection '{self.db_collection}' created successfully.")
         except Exception as e:
             print(f"Could not recreate collection: {e}. It might already exist with compatible settings.")
 
@@ -97,8 +97,8 @@ class CodeSearchEngine:
             )
 
         # Upsert to Qdrant
-        self.qdrant_client.upsert(collection_name=self.collection_name, points=points, wait=True)
-        print(f"Successfully indexed {len(points)} chunks into '{self.collection_name}'.")
+        self.qdrant_client.upsert(collection_name=self.db_collection, points=points, wait=True)
+        print(f"Successfully indexed {len(points)} chunks into '{self.db_collection}'.")
 
     def search(self, text_query: str, k: int = 10) -> List[Dict[str, Any]]:
         """
@@ -118,7 +118,7 @@ class CodeSearchEngine:
 
         # Perform search
         search_results = self.qdrant_client.search(
-            collection_name=self.collection_name,
+            collection_name=self.db_collection,
             query_vector=query_embedding,
             limit=k,
             with_payload=True,
