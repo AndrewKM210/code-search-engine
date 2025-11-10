@@ -3,14 +3,14 @@ from omegaconf import OmegaConf
 from search_engine.engine import CodeSearchEngine
 
 
-def run_demo(code_dir, model_name, db_collection, db_path):
+def run_demo(code_dir, model_name, db_collection, db_path, chunk_size, chunk_overlap):
     print("--- Starting Code Search Demo ---")
 
     # Initialize the Search Engine
     engine = CodeSearchEngine(model_name=model_name, db_collection=db_collection, db_path=db_path)
 
     # Index the collection of documents
-    engine.index_from_directory(code_dir)
+    engine.index_from_directory(code_dir, chunk_size, chunk_overlap)
 
     # Define Test Queries
     test_queries = [
@@ -44,4 +44,11 @@ if __name__ == "__main__":
     config = OmegaConf.load(args.config)
 
     # Run demo
-    run_demo(args.sample_code, config.model_name, config.qdrant.collection, config.qdrant.storage_path)
+    run_demo(
+        args.sample_code,
+        config.model_name,
+        config.qdrant.collection,
+        config.qdrant.storage_path,
+        config.splitter.chunk_size,
+        config.splitter.chunk_overlap,
+    )

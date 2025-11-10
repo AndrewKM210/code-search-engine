@@ -53,7 +53,7 @@ class CodeSearchEngine:
         except Exception as e:
             print(f"Could not recreate collection: {e}. It might already exist with compatible settings.")
 
-    def index_from_directory(self, dir_path: str):
+    def index_from_directory(self, dir_path: str, chunk_size: int = 1000, chunk_overlap: int = 100):
         """
         Loads, splits, and indexes all documents from a specified directory.
         """
@@ -76,7 +76,7 @@ class CodeSearchEngine:
 
         # Split Documents
         # TODO: is it best option?
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
         chunks = text_splitter.split_documents(documents)
         print(f"Split {len(documents)} documents into {len(chunks)} chunks.")
 
