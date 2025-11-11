@@ -1,2 +1,6 @@
-__pycache__
-qdrant*
+__pycache__/
+qdrant*/
+*model*/
+mlruns/
+data/
+results/

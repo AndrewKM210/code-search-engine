@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 from omegaconf import OmegaConf
+import os
 import time
 import numpy as np
 from datasets import load_dataset
@@ -134,17 +135,35 @@ def main():
     # Evaluate base model
     base_metrics = run_evaluation(
         model_name=config.model_name,
-        db_collection=config.qdrant.eval_base_collection,
         corpus=corpus,
         eval_queries=eval_queries,
+        db_collection=config.qdrant.eval_base_collection,
         db_path=config.qdrant.storage_path,
     )
 
-    # Compare results
-    print("\n--- Final Comparison ---")
-    df = pd.DataFrame([base_metrics], index=["Base Model"])
-    print(df.to_markdown(floatfmt=".4f"))
+    # Evaluate fine-tuned model
+    if not os.path.exists(config.finetuned_model_path):
+        print(f"Fine-tuned model not found at '{config.finetuned_model_path}'.")
+        print("Please run 'python fine_tune.py' first.")
+        finetuned_metrics = {k: 0 for k in base_metrics} # Empty results
+    else:
+        finetuned_metrics = run_evaluation(
+            model_name=config.finetuned_model_path,
+            corpus=corpus,
+            eval_queries=eval_queries,
+            db_collection=config.qdrant.eval_finetuned_collection,
+            db_path=config.qdrant.storage_path
+        )
 
+    # Compare and store results
+    print("\n--- Final Comparison ---")
+    df = pd.DataFrame([base_metrics, finetuned_metrics], index=["Base Model", "Fine-Tuned Model"])
+    print(df.to_markdown(floatfmt=".4f"))
+    out_path = "results/evaluation.csv"
+    if not os.path.exists(os.path.split(out_path)[0]):
+            os.mkdir(os.path.split(out_path)[0])
+    df.to_csv(out_path, index_label="Model")
+    print(f"Saved results to {out_path}")
 
 if __name__ == "__main__":
     main()
