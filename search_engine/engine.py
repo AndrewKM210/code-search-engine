@@ -27,11 +27,11 @@ class CodeSearchEngine:
         # Use HuggingFaceEmbeddings for compatibility with LangChain loaders
         self.embeddings_model = HuggingFaceEmbeddings(
             model_name=model_name,
-            model_kwargs={"device": "cpu"},  # TODO: try with cuda?
+            model_kwargs={"device": "cuda"},
         )
 
         # Use SentenceTransformer directly for batch encoding and getting dimensions
-        self._sbert_model = SentenceTransformer(model_name)
+        self._sbert_model = SentenceTransformer(model_name, device="cuda")
         self.embedding_dim = self._sbert_model.get_sentence_embedding_dimension()
 
         # Initialize Qdrant client
