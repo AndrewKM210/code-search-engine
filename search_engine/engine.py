@@ -59,7 +59,7 @@ class CodeSearchEngine:
         """
         print(f"Indexing documents from directory: {dir_path}")
 
-        # Load Documents
+        # Load documents
         loader = DirectoryLoader(
             dir_path,
             glob="**/*.*",  # TODO: is it possible for only code files?
@@ -74,13 +74,13 @@ class CodeSearchEngine:
             print(f"No documents found in {dir_path}.")
             return
 
-        # Split Documents
+        # Split documents
         # TODO: is it best option?
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
         chunks = text_splitter.split_documents(documents)
         print(f"Split {len(documents)} documents into {len(chunks)} chunks.")
 
-        # Embed and Prepare Points
+        # Embed and prepare points
         points = []
         chunk_texts = [chunk.page_content for chunk in chunks]
 
@@ -99,6 +99,33 @@ class CodeSearchEngine:
         # Upsert to Qdrant
         self.qdrant_client.upsert(collection_name=self.db_collection, points=points, wait=True)
         print(f"Successfully indexed {len(points)} chunks into '{self.db_collection}'.")
+
+    def index_corpus(self, corpus: Dict[str, str]):
+        """
+        Indexes a pre-defined corpus from a dictionary.
+        This is for the 'evaluate.py' task.
+
+        Args:
+            corpus (Dict[str, str]): A dictionary mapping a unique code_id -> code_content
+        """
+        print(f"Indexing corpus with {len(corpus)} entries...")
+
+        contents = list(corpus.values())
+
+        # Embed in batches
+        print(f"Embedding {len(contents)} code snippets...")
+        embeddings = self._sbert_model.encode(contents, batch_size=32, show_progress_bar=True)
+
+        # Prepare points
+        points = []
+        for i, (code_id, content) in enumerate(corpus.items()):
+            points.append(
+                models.PointStruct(id=code_id, vector=embeddings[i].tolist(), payload={"code_content": content})
+            )
+
+        # Upsert to Qdrant
+        self.qdrant_client.upsert(collection_name=self.db_collection, points=points, wait=True)
+        print(f"Successfully indexed {len(points)} snippets into '{self.db_collection}'.")
 
     def search(self, text_query: str, k: int = 10) -> List[Dict[str, Any]]:
         """

@@ -4,7 +4,8 @@ model_name: "all-MiniLM-L6-v2"
 # Vector DB (Qdrant)
 qdrant:
   storage_path: "./qdrant_storage"
-  collection: "demo_code_collection"
+  demo_collection: "demo_code_collection"
+  eval_base_collection: "cosqa_base"
 
 # Data Processing
 splitter:

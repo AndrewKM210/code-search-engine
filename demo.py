@@ -6,20 +6,20 @@ from search_engine.engine import CodeSearchEngine
 def run_demo(code_dir, model_name, db_collection, db_path, chunk_size, chunk_overlap):
     print("--- Starting Code Search Demo ---")
 
-    # Initialize the Search Engine
+    # Initialize the search engine
     engine = CodeSearchEngine(model_name=model_name, db_collection=db_collection, db_path=db_path)
 
     # Index the collection of documents
     engine.index_from_directory(code_dir, chunk_size, chunk_overlap)
 
-    # Define Test Queries
+    # Define test queries
     test_queries = [
         "a python function for sorting a list",
         "how to get a user with javascript",
         "calculate the mean value in python",
     ]
 
-    # Run Test Queries
+    # Run test queries
     for query in test_queries:
         print(f"\nSearching for: '{query}'")
         results = engine.search(query, k=2)
@@ -47,7 +47,7 @@ if __name__ == "__main__":
     run_demo(
         args.sample_code,
         config.model_name,
-        config.qdrant.collection,
+        config.qdrant.demo_collection,
         config.qdrant.storage_path,
         config.splitter.chunk_size,
         config.splitter.chunk_overlap,
