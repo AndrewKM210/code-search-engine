@@ -8,9 +8,10 @@ from sentence_transformers import SentenceTransformer
 from sentence_transformers.losses import MultipleNegativesRankingLoss
 from sentence_transformers.trainer import SentenceTransformerTrainer, SentenceTransformerTrainingArguments
 from sentence_transformers.training_args import BatchSamplers
+from search_engine.utils import extract_function_name
 
 
-def get_fine_tuning_data():
+def get_fine_tuning_data(fn_names: bool = False):
     """
     Loads CoSQA train split and formats it for MNR loss.
 
@@ -26,17 +27,36 @@ def get_fine_tuning_data():
         num_proc=4,
     )
 
-    # Rename columns to what the loss function expects: "anchor" and "positive"
-    dataset = dataset.rename_columns({"doc": "anchor", "code": "positive"})
+    if fn_names:
+        # Extract function names
+        print("Only using function names.")
+        dataset = dataset.map(
+            lambda example: {"function_name": extract_function_name(example["code"])},
+            num_proc=4,
+        )
 
-    # Remove old columns that are no longer needed
-    dataset = dataset.remove_columns(["code_tokens", "label", "docstring_tokens", "idx"])
+        # Rename columns to what the loss function expects: "anchor" and "positive"
+        dataset = dataset.rename_columns({"doc": "anchor", "function_name": "positive"}).select_columns(
+            ["anchor", "positive"]
+        )
+    else:
+        # Rename columns to what the loss function expects: "anchor" and "positive"
+        print("Using whole code snippets.")
+        dataset = dataset.rename_columns({"doc": "anchor", "code": "positive"}).select_columns(["anchor", "positive"])
+
 
     print(f"Created {len(dataset)} positive training examples.")
     return dataset
 
 
-def run_fine_tuning(base_model: str, batch_size: int, num_epochs: int, max_train_steps: int, tuned_model_path: str):
+def run_fine_tuning(
+    base_model: str,
+    batch_size: int,
+    num_epochs: int,
+    max_train_steps: int,
+    tuned_model_path: str,
+    fn_names: bool = False,
+):
     """
     Finetunes the base model and stores it.
 
@@ -50,7 +70,7 @@ def run_fine_tuning(base_model: str, batch_size: int, num_epochs: int, max_train
     print(f"Starting fine-tuning process based on '{base_model}'...")
 
     # Get training data
-    train_dataset = get_fine_tuning_data()
+    train_dataset = get_fine_tuning_data(fn_names)
 
     # Load base model
     model = SentenceTransformer(base_model)
@@ -70,7 +90,7 @@ def run_fine_tuning(base_model: str, batch_size: int, num_epochs: int, max_train
             per_device_train_batch_size=batch_size,
             max_steps=max_train_steps,
             warmup_ratio=0.1,
-            batch_sampler=BatchSamplers.NO_DUPLICATES,  # MultipleNegativesRankingLoss benefits from no duplicates
+            batch_sampler=BatchSamplers.NO_DUPLICATES,  # MNR loss benefits from no duplicates
             logging_strategy="steps",
             logging_steps=10,
         )
@@ -85,10 +105,10 @@ def run_fine_tuning(base_model: str, batch_size: int, num_epochs: int, max_train
         trainer.save_model(tuned_model_path)
         print(f"\nFine-tuning complete. Model saved to '{tuned_model_path}'")
 
-    store_loss_from_mlflow(run.info.run_id)
+    store_loss_from_mlflow(run.info.run_id, fn_names)
 
 
-def store_loss_from_mlflow(run_id):
+def store_loss_from_mlflow(run_id, fn_names):
     """
     Fetches training loss from MLflow and stores it in results/losses.csv
 
@@ -106,7 +126,7 @@ def store_loss_from_mlflow(run_id):
 
         # Save loss to csv
         df = pd.DataFrame({"Step": [m.step for m in metrics], "Loss": [m.value for m in metrics]})
-        out_path = "results/losses.csv"
+        out_path = "results/losses.csv" if not fn_names else "results/losses_fn_names.csv"
         if not os.path.exists(os.path.split(out_path)[0]):
             os.mkdir(os.path.split(out_path)[0])
         df.to_csv(out_path, index=False)
@@ -120,11 +140,16 @@ if __name__ == "__main__":
     # Parse arguments and config file
     parser = ArgumentParser()
     parser.add_argument("--config", type=str, default="config/main_config.yaml")
+    parser.add_argument("--fn_names", action="store_true")
     args = parser.parse_args()
     config = OmegaConf.load(args.config)
 
+    finetuned_path = config.finetuned_model_path
+    if args.fn_names:
+        finetuned_path += "_fn_names"
+
     # Train model if it does not already exist
-    if os.path.exists(config.finetuned_model_path):
+    if os.path.exists(finetuned_path):
         print("Fine-tuned model already exists. Skipping training.")
     else:
         run_fine_tuning(
@@ -132,5 +157,6 @@ if __name__ == "__main__":
             config.training.batch_size,
             config.training.num_epochs,
             config.training.max_train_steps,
-            config.finetuned_model_path,
+            finetuned_path,
+            args.fn_names,
         )

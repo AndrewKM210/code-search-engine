@@ -1,19 +1,19 @@
-from argparse import ArgumentParser
-from omegaconf import OmegaConf
-import os
 import time
 import numpy as np
 from datasets import load_dataset
 from tqdm import tqdm
 from search_engine.engine import CodeSearchEngine
-import pandas as pd
+from search_engine.utils import extract_function_name
 
 METRICS_K = 10  # Evaluate metrics @ 10
 
 
-def prepare_cosqa_data() -> (dict, dict):
+def prepare_cosqa_data(fn_names: bool = False) -> (dict, dict):
     """
     Loads the CoSQA 'validation' split and prepares it for retrieval evaluation.
+
+    Args:
+        fn_names (bool): Use only function names.
 
     Returns:
         (dict, dict): Maps id -> code snippet, maps query -> id.
@@ -24,7 +24,11 @@ def prepare_cosqa_data() -> (dict, dict):
     dataset = load_dataset("gonglinyuan/CoSQA", split="validation")
 
     print("Building unique code corpus...")
-    code_snippets = set(item["code"] for item in tqdm(dataset, desc="Reading code"))
+    if fn_names:
+        dataset = dataset.map(lambda example: {"function_name": extract_function_name(example["code"])}, num_proc=4)
+        code_snippets = set(item["function_name"] for item in tqdm(dataset, desc="Reading code"))
+    else:
+        code_snippets = set(item["code"] for item in tqdm(dataset, desc="Reading code"))
 
     corpus = {i: code for i, code in enumerate(code_snippets)}
     code_to_id = {code: i for i, code in corpus.items()}
@@ -34,9 +38,14 @@ def prepare_cosqa_data() -> (dict, dict):
 
     print("Building validation set...")
     for item in tqdm(dataset, desc="Mapping queries"):
-        if item["label"] == 1: # Only evaluate on positive samples
+        if item["label"] == 1:  # Only evaluate on positive samples
             query = item["doc"]
-            code = item["code"]
+
+            if fn_names:
+                code = item["function_name"]
+            else:
+                code = item["code"]
+
             ground_truth_code_id = code_to_id[code]
 
             if query not in eval_queries:
@@ -48,7 +57,13 @@ def prepare_cosqa_data() -> (dict, dict):
     return corpus, eval_queries
 
 
-def run_evaluation(model_name: str, corpus: dict, eval_queries: dict, db_collection: str, db_path: str) -> dict:
+def run_evaluation(
+    model_name: str,
+    corpus: dict,
+    eval_queries: dict,
+    db_collection: str,
+    db_path: str,
+) -> dict:
     """
     Runs the full evaluation for a given model and returns metrics.
 
@@ -65,7 +80,11 @@ def run_evaluation(model_name: str, corpus: dict, eval_queries: dict, db_collect
     print(f"\n--- Starting Evaluation for: {model_name} ---")
 
     # Initialize and index the engine
-    engine = CodeSearchEngine(model_name=model_name, db_collection=db_collection, db_path=db_path)
+    engine = CodeSearchEngine(
+        model_name=model_name,
+        db_collection=db_collection,
+        db_path=db_path,
+    )
     engine.index_corpus(corpus)
 
     # Run evaluation loop
@@ -120,50 +139,3 @@ def run_evaluation(model_name: str, corpus: dict, eval_queries: dict, db_collect
     }
 
     return metrics
-
-
-def main():
-    # Parse arguments and config file
-    parser = ArgumentParser()
-    parser.add_argument("--config", type=str, default="config/main_config.yaml")
-    args = parser.parse_args()
-    config = OmegaConf.load(args.config)
-
-    # Prepare data
-    corpus, eval_queries = prepare_cosqa_data()
-
-    # Evaluate base model
-    base_metrics = run_evaluation(
-        model_name=config.model_name,
-        corpus=corpus,
-        eval_queries=eval_queries,
-        db_collection=config.qdrant.eval_base_collection,
-        db_path=config.qdrant.storage_path,
-    )
-
-    # Evaluate fine-tuned model
-    if not os.path.exists(config.finetuned_model_path):
-        print(f"Fine-tuned model not found at '{config.finetuned_model_path}'.")
-        print("Please run 'python fine_tune.py' first.")
-        finetuned_metrics = {k: 0 for k in base_metrics} # Empty results
-    else:
-        finetuned_metrics = run_evaluation(
-            model_name=config.finetuned_model_path,
-            corpus=corpus,
-            eval_queries=eval_queries,
-            db_collection=config.qdrant.eval_finetuned_collection,
-            db_path=config.qdrant.storage_path
-        )
-
-    # Compare and store results
-    print("\n--- Final Comparison ---")
-    df = pd.DataFrame([base_metrics, finetuned_metrics], index=["Base Model", "Fine-Tuned Model"])
-    print(df.to_markdown(floatfmt=".4f"))
-    out_path = "results/evaluation.csv"
-    if not os.path.exists(os.path.split(out_path)[0]):
-            os.mkdir(os.path.split(out_path)[0])
-    df.to_csv(out_path, index_label="Model")
-    print(f"Saved results to {out_path}")
-
-if __name__ == "__main__":
-    main()
