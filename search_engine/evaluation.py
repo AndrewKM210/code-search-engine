@@ -63,6 +63,10 @@ def run_evaluation(
     eval_queries: dict,
     db_collection: str,
     db_path: str,
+    hnsw_config: dict = {},
+    optimizers_config: dict = {},
+    hnsw_ef = 128,
+    quiet: bool = False,
 ) -> dict:
     """
     Runs the full evaluation for a given model and returns metrics.
@@ -73,17 +77,25 @@ def run_evaluation(
         eval_queries (dict): Maps query -> id.
         db_collection (str): The name of the Qdrant collection.
         db_path (str): The path for Qdrant's on-disk storage.
+        hnsw_config (dict): Parameters of HNSW index.
+        optimizers_config (dict): Parameters of index optimizer.
+        hnsw_ef (int): Query search range.
+        quiet (bool): Do not print to output.
 
     Returns:
         dict: Maps metric -> value.
     """
-    print(f"\n--- Starting Evaluation for: {model_name} ---")
+    if not quiet:
+        print(f"\n--- Starting Evaluation for: {model_name} ---")
 
     # Initialize and index the engine
     engine = CodeSearchEngine(
         model_name=model_name,
         db_collection=db_collection,
         db_path=db_path,
+        hnsw_config=hnsw_config,
+        optimizers_config=optimizers_config,
+        quiet=quiet,
     )
     engine.index_corpus(corpus)
 
@@ -96,8 +108,8 @@ def run_evaluation(
 
     start_time = time.time()
 
-    for query, ground_truth_ids in tqdm(eval_queries.items(), desc="Evaluating queries"):
-        results = engine.search(query, k=METRICS_K)
+    for query, ground_truth_ids in tqdm(eval_queries.items(), desc="Evaluating queries", disable=quiet):
+        results = engine.search(query, k=METRICS_K, hnsw_ef=hnsw_ef)
 
         # MRR@k and Recall@k
         rank = 0
