@@ -16,6 +16,7 @@ class CodeSearchEngine:
         model_name: str,
         db_collection: str,
         db_path: str,
+        db_recreate: bool = False,
         hnsw_config: Dict = {},
         optimizers_config: Dict = {},
         quiet: bool = False,
@@ -27,6 +28,7 @@ class CodeSearchEngine:
             model_name (str): The name or path of the Hugging Face sentence-transformer model.
             db_collection (str): The name of the Qdrant collection.
             db_path (str): The path for Qdrant's on-disk storage.
+            db_recreate (bool): Recreate Qdrant collection even if it exists.
             hnsw_config (dict): Parameters of HNSW index.
             optimizers_config (dict): Parameters of index optimizer.
             quiet (bool): Do not print to output.
@@ -53,23 +55,30 @@ class CodeSearchEngine:
         self.optimizers_config = optimizers_config
 
         # Create or recreate the collection
-        self._create_collection()
+        self._create_collection(db_recreate)
 
-    def _create_collection(self):
+    def _create_collection(self, recreate: bool):
         """
         Creates or recreates the Qdrant collection with the correct configuration.
+
+        Args:
+            recreate (bool): Recreate the collection even if it already exists.
         """
-        try:
-            self.qdrant_client.recreate_collection(
-                collection_name=self.db_collection,
-                vectors_config=models.VectorParams(size=self.embedding_dim, distance=models.Distance.COSINE),
-                hnsw_config=models.HnswConfigDiff(**self.hnsw_config),
-                optimizers_config=models.OptimizersConfigDiff(**self.optimizers_config),
-            )
+        if not self.qdrant_client.collection_exists(self.db_collection) or recreate:
+            try:
+                self.qdrant_client.recreate_collection(
+                    collection_name=self.db_collection,
+                    vectors_config=models.VectorParams(size=self.embedding_dim, distance=models.Distance.COSINE),
+                    hnsw_config=models.HnswConfigDiff(**self.hnsw_config),
+                    optimizers_config=models.OptimizersConfigDiff(**self.optimizers_config),
+                )
+                if not self.quiet:
+                    print(f"Collection '{self.db_collection}' created successfully.")
+            except Exception as e:
+                print(f"Could not recreate collection: {e}. It might already exist with compatible settings.")
+        else:
             if not self.quiet:
-                print(f"Collection '{self.db_collection}' created successfully.")
-        except Exception as e:
-            print(f"Could not recreate collection: {e}. It might already exist with compatible settings.")
+                print(f"Collection '{self.db_collection}' already exists. Not recreating collection.")
 
     def index_from_directory(self, dir_path: str, chunk_size: int = 1000, chunk_overlap: int = 100):
         """
