@@ -2,8 +2,8 @@ import time
 import numpy as np
 from datasets import load_dataset
 from tqdm import tqdm
-from search_engine.engine import CodeSearchEngine
-from search_engine.utils import extract_function_name
+from cse.search_engine.engine import CodeSearchEngine
+from cse.search_engine.utils import extract_function_name
 
 METRICS_K = 10  # Evaluate metrics @ 10
 

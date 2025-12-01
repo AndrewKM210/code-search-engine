@@ -1,6 +1,6 @@
 from argparse import ArgumentParser
 from omegaconf import OmegaConf
-from src.search_engine.engine import CodeSearchEngine
+from cse.search_engine.engine import CodeSearchEngine
 
 
 def run_demo(code_dir, model_name, db_collection, db_path, chunk_size, chunk_overlap):

@@ -2,7 +2,7 @@ from argparse import ArgumentParser
 from datasets import load_dataset
 from omegaconf import OmegaConf
 from tqdm import tqdm
-from src.search_engine.engine import CodeSearchEngine
+from cse.search_engine.engine import CodeSearchEngine
 
 
 def prepare_cosqa_dataset() -> dict:

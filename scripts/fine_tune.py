@@ -8,7 +8,7 @@ from sentence_transformers import SentenceTransformer
 from sentence_transformers.losses import MultipleNegativesRankingLoss
 from sentence_transformers.trainer import SentenceTransformerTrainer, SentenceTransformerTrainingArguments
 from sentence_transformers.training_args import BatchSamplers
-from src.search_engine.utils import extract_function_name
+from cse.search_engine.utils import extract_function_name
 
 
 def get_fine_tuning_data(fn_names: bool = False):
