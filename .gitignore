@@ -4,3 +4,4 @@ qdrant*/
 mlruns/
 data/
 results/
+*.egg-info
