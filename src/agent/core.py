@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Any, Generator
-from agent.llm import LLMClient
-from search_engine.engine import CodeSearchEngine
+from src.agent.llm import LLMClient
+from src.search_engine.engine import CodeSearchEngine
 
 
 @dataclass

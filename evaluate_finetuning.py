@@ -2,7 +2,7 @@ import os
 from argparse import ArgumentParser
 import pandas as pd
 from omegaconf import OmegaConf
-from search_engine.evaluation import prepare_cosqa_data, run_evaluation
+from src.search_engine.evaluation import prepare_cosqa_data, run_evaluation
 
 
 def main():

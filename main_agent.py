@@ -1,9 +1,9 @@
 import time
 from argparse import ArgumentParser
 from omegaconf import OmegaConf
-from agent.core import CodingAgent
-from agent.llm import LLMClient
-from search_engine.engine import CodeSearchEngine
+from src.agent.core import CodingAgent
+from src.agent.llm import LLMClient
+from src.search_engine.engine import CodeSearchEngine
 
 
 def main():
