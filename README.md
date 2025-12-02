@@ -1,5 +1,13 @@
 # Local AI Self-Correcting RAG Code Assistant
 
+[![Python 3.10.18](https://img.shields.io/badge/Python-3.10.18-blue?logo=python&logoColor=white)](https://www.python.org/)
+[![Qdrant](https://img.shields.io/badge/Qdrant-2E8B57?logo=qdrant&logoColor=white)](https://qdrant.tech/)
+[![Hugging Face](https://img.shields.io/badge/HuggingFace-F3E838?logo=huggingface&logoColor=black)](https://huggingface.co/)
+[![MLflow](https://img.shields.io/badge/MLflow-0096C6?logo=mlflow&logoColor=white)](https://mlflow.org/)
+[![Ollama](https://img.shields.io/badge/Ollama-000000?logo=ollama&logoColor=white)](https://ollama.com/)
+[![LangChain](https://img.shields.io/badge/LangChain-385073?logo=langchain&logoColor=white)](https://www.langchain.com/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io/)
+
 This project implements a Retrieval-Augmented Generation (RAG) agent designed to answer programming queries by utilizing a semantic vector database and a local Large Language Model (LLM) with a self-correction mechanism.
 
 <picture>
