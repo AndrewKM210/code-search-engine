@@ -3,5 +3,4 @@ qdrant*/
 *model*/
 mlruns/
 data/
-results/
 *.egg-info
