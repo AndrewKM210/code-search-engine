@@ -1,16 +1,16 @@
 # Model Configuration
-model_name: "all-MiniLM-L6-v2"
-finetuned_model_path: "finetuned_model"
+model_name: "all-MiniLM-L6-v2"                  # Name of HuggingFace base sentence transformer model
+finetuned_model_path: "finetuned_model"         # Path to save/load finetuned base model
 
 # Vector DB (Qdrant)
 qdrant:
-  storage_path: "./qdrant_storage"
-  demo_collection: "demo_code_collection"
-  full_collection: "cosqa_full"
-  eval_base_collection: "cosqa_base"
-  eval_finetuned_collection: "cosqa_finetuned"
+  storage_path: "./qdrant_storage"              # Path where Qdrant vector database is stored
+  demo_collection: "demo_code_collection"       # Name of Qdrant collection for the demo code
+  full_collection: "cosqa_full"                 # Name of Qdrant collection for the complete CoSQA dataset
+  eval_base_collection: "cosqa_base"            # Name of Qdrant collection for the CoSQA evaluation split
+  eval_finetuned_collection: "cosqa_finetuned"  # Name of Qdrant collection for the CoSQA train split
 
-# Data Processing
+# Data Processing for Indexing
 splitter:
   chunk_size: 1000
   chunk_overlap: 100
