@@ -49,7 +49,7 @@ def main():
     # Compare and store results
     print("\n--- Final Comparison ---")
     df = pd.DataFrame(
-        [finetuned_metrics, fn_names_metrics], index=["Fine-Tuned Model", "Fine-Tuned Model - Only Function Names"]
+        [finetuned_metrics, fn_names_metrics], index=["Fine-Tuned Model", "Fine-Tuned Model (Function Names)"]
     )
     print(df.to_markdown(floatfmt=".4f"))
     out_path = "results/evaluation_fn_names.csv"
