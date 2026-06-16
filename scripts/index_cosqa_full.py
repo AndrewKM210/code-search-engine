@@ -49,6 +49,7 @@ def main():
         model_name,
         db_collection=config.qdrant.full_collection,
         db_path=config.qdrant.storage_path,
+        device=config.get("device", "auto"),
     )
 
     print("\n--- Indexing Full CoSQA Dataset ---")

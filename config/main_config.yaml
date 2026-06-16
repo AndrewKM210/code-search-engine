@@ -1,6 +1,7 @@
 # Model Configuration
 model_name: "all-MiniLM-L6-v2"                  # Name of HuggingFace base sentence transformer model
 finetuned_model_path: "finetuned_model"         # Path to save/load finetuned base model
+device: "auto"                                  # Compute device for embeddings: auto | cuda | mps | cpu
 
 # Vector DB (Qdrant)
 qdrant:

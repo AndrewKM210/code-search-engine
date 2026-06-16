@@ -1,9 +1,30 @@
 from typing import Any, Dict, List
+import torch
 from langchain_community.document_loaders import DirectoryLoader, TextLoader
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from qdrant_client import QdrantClient, models
 from sentence_transformers import SentenceTransformer
+
+
+def resolve_device(device: str = "auto") -> str:
+    """
+    Resolves the compute device for the embedding models.
+
+    Args:
+        device (str): Requested device. "auto" picks the best available
+            (CUDA > Apple MPS > CPU); any other value is returned as-is.
+
+    Returns:
+        str: A concrete device string ("cuda", "mps" or "cpu").
+    """
+    if device and device != "auto":
+        return device
+    if torch.cuda.is_available():
+        return "cuda"
+    if torch.backends.mps.is_available():
+        return "mps"
+    return "cpu"
 
 
 class CodeSearchEngine:
@@ -19,6 +40,7 @@ class CodeSearchEngine:
         db_recreate: bool = False,
         hnsw_config: Dict = {},
         optimizers_config: Dict = {},
+        device: str = "auto",
         quiet: bool = False,
     ):
         """
@@ -31,10 +53,12 @@ class CodeSearchEngine:
             db_recreate (bool): Recreate Qdrant collection even if it exists.
             hnsw_config (dict): Parameters of HNSW index.
             optimizers_config (dict): Parameters of index optimizer.
+            device (str): Compute device for the embedding models.
             quiet (bool): Do not print to output.
         """
+        self.device = resolve_device(device)
         if not quiet:
-            print(f"Initializing engine with model: {model_name} and collection: {db_collection}")
+            print(f"Initializing engine with model: {model_name} on device: {self.device} and collection: {db_collection}")
         self.model_name = model_name
         self.db_collection = db_collection
         self.quiet = quiet
@@ -42,11 +66,11 @@ class CodeSearchEngine:
         # Use HuggingFaceEmbeddings for compatibility with LangChain loaders
         self.embeddings_model = HuggingFaceEmbeddings(
             model_name=model_name,
-            model_kwargs={"device": "cuda"},
+            model_kwargs={"device": self.device},
         )
 
         # Use SentenceTransformer directly for batch encoding and getting dimensions
-        self._sbert_model = SentenceTransformer(model_name, device="cuda")
+        self._sbert_model = SentenceTransformer(model_name, device=self.device)
         self.embedding_dim = self._sbert_model.get_sentence_embedding_dimension()
 
         # Initialize Qdrant client and parameters

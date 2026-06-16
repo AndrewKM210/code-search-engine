@@ -20,6 +20,7 @@ def main():
             model_name=config.finetuned_model_path,
             db_collection=config.qdrant.full_collection,
             db_path=config.qdrant.storage_path,
+            device=config.get("device", "auto"),
         )
 
         print("\n--- Loading LLM (Ollama/Phi-3) ---")
