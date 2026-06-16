@@ -29,15 +29,26 @@ def main():
     # Parse arguments and config file
     parser = ArgumentParser()
     parser.add_argument("--config", type=str, default="config/main_config.yaml")
+    parser.add_argument(
+        "--finetuned",
+        action="store_true",
+        help="Index using the fine-tuned model, defaults to the base model.",
+    )
     args = parser.parse_args()
     config = OmegaConf.load(args.config)
+
+    # Select the embedding model: base by default, fine-tuned only when requested
+    model_name = config.finetuned_model_path if args.finetuned else config.model_name
+    print(f"Using {'fine-tuned' if args.finetuned else 'base'} model: {model_name}")
 
     print("--- Preparing Full CoSQA Dataset ---")
     corpus = prepare_cosqa_dataset()
 
     print("\n--- Initializing Code Search Engine ---")
     engine = CodeSearchEngine(
-        config.finetuned_model_path, db_collection=config.qdrant.full_collection, db_path=config.qdrant.storage_path
+        model_name,
+        db_collection=config.qdrant.full_collection,
+        db_path=config.qdrant.storage_path,
     )
 
     print("\n--- Indexing Full CoSQA Dataset ---")
