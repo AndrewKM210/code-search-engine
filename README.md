@@ -64,16 +64,17 @@ The system operates based on a clear separation of concerns, managed by the cent
 
 ### Installation
 
-Navigate to the project root directory and install dependencies:
+Navigate to the project root directory and install the project in editable mode:
 
-1.  **Install Required Packages:**
-    ```bash
-    pip install -r requirements.txt
-    ```
-2.  **Install Project in Editable Mode:**
-    ```bash
-    pip install -e .
-    ```
+```bash
+pip install -e .
+```
+
+For development (running tests, notebooks, plots), install the `dev` extra instead:
+
+```bash
+pip install -e ".[dev]"
+```
 
 ### Initial Setup (Indexing the Data and Fine-Tuning the SBERT model)
 
