@@ -1,7 +1,34 @@
+import re
 from pathlib import Path
 
 MAX_FILE_CHARS = 10_000  # cap how much of a file gets returned to the LLM
 MAX_DIR_ENTRIES = 200  # cap how many directory entries get returned to the LLM
+MAX_GREP_MATCHES = 100  # cap how many grep matches get returned to the LLM
+MAX_GREP_LINE_CHARS = 200  # cap the length of each matched line shown
+
+
+def _resolve_within(path: str, base_dir: str) -> Path | str:
+    """
+    Resolves path under base_dir and verifies it stays inside and exists.
+
+    Args:
+        path (str): Path relative to base_dir.
+        base_dir (str): Root directory the path is restricted to (prevents
+            escaping via "../" or absolute paths).
+
+    Returns:
+        Path | str: The resolved Path on success, or a human-readable error
+            message starting with "Error:".
+    """
+    base = Path(base_dir).resolve()
+    target = (base / path).resolve()
+
+    if not target.is_relative_to(base):
+        return f"Error: '{path}' is outside the allowed directory."
+    if not target.exists():
+        return f"Error: '{path}' does not exist."
+
+    return target
 
 
 def read_file(path: str, base_dir: str = ".") -> str:
@@ -17,13 +44,9 @@ def read_file(path: str, base_dir: str = ".") -> str:
         str: The file's contents (truncated if very large), or a
             human-readable error message starting with "Error:".
     """
-    base = Path(base_dir).resolve()
-    target = (base / path).resolve()
-
-    if not target.is_relative_to(base):
-        return f"Error: '{path}' is outside the allowed directory."
-    if not target.exists():
-        return f"Error: '{path}' does not exist."
+    target = _resolve_within(path, base_dir)
+    if isinstance(target, str):
+        return target
     if not target.is_file():
         return f"Error: '{path}' is not a file."
 
@@ -52,13 +75,9 @@ def list_directory(path: str = ".", base_dir: str = ".") -> str:
             first, an "(empty directory)" note, or a human-readable error
             message starting with "Error:".
     """
-    base = Path(base_dir).resolve()
-    target = (base / path).resolve()
-
-    if not target.is_relative_to(base):
-        return f"Error: '{path}' is outside the allowed directory."
-    if not target.exists():
-        return f"Error: '{path}' does not exist."
+    target = _resolve_within(path, base_dir)
+    if isinstance(target, str):
+        return target
     if not target.is_dir():
         return f"Error: '{path}' is not a directory."
 
@@ -78,3 +97,69 @@ def list_directory(path: str = ".", base_dir: str = ".") -> str:
         listing += "\n... [truncated]"
 
     return listing
+
+
+def grep(pattern: str, path: str = ".", base_dir: str = ".") -> str:
+    """
+    Searches file contents for a regex pattern, scoped to base_dir.
+
+    Args:
+        pattern (str): Regular expression to search for, line by line.
+        path (str): File or directory to search, relative to base_dir. A
+            directory is searched recursively.
+        base_dir (str): Root directory the search is restricted to (prevents
+            escaping the project via "../" or absolute paths).
+
+    Returns:
+        str: One match per line as "relative/path:lineno: line", a
+            "No matches found." note, or a human-readable error message
+            starting with "Error:".
+    """
+    target = _resolve_within(path, base_dir)
+    if isinstance(target, str):
+        return target
+
+    try:
+        regex = re.compile(pattern)
+    except re.error as e:
+        return f"Error: invalid pattern '{pattern}': {e}."
+
+    base = Path(base_dir).resolve()
+
+    # Search a single file directly or every file under a directory
+    files = (
+        [target]
+        if target.is_file()
+        else sorted(p for p in target.rglob("*") if p.is_file())
+    )
+
+    matches: list[str] = []
+    truncated = False
+    for file in files:
+        try:
+            text = file.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            # Skip binary or unreadable files
+            continue
+
+        rel = file.relative_to(base)
+        for lineno, line in enumerate(text.splitlines(), start=1):
+            if regex.search(line):
+                snippet = line.strip()
+                if len(snippet) > MAX_GREP_LINE_CHARS:
+                    snippet = snippet[:MAX_GREP_LINE_CHARS] + "..."
+                matches.append(f"{rel}:{lineno}: {snippet}")
+                if len(matches) >= MAX_GREP_MATCHES:
+                    truncated = True
+                    break
+        if truncated:
+            break
+
+    if not matches:
+        return "No matches found."
+
+    result = "\n".join(matches)
+    if truncated:
+        result += "\n... [truncated]"
+
+    return result
