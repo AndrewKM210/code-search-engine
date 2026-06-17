@@ -1,7 +1,9 @@
 from argparse import ArgumentParser
+
 from datasets import load_dataset
 from omegaconf import OmegaConf
 from tqdm import tqdm
+
 from cse.search_engine.engine import CodeSearchEngine
 
 
@@ -18,7 +20,9 @@ def prepare_cosqa_dataset() -> dict:
     dataset = load_dataset("gonglinyuan/CoSQA", split="train")
 
     print("Building unique code corpus...")
-    code_snippets = set(item["code"] for item in tqdm(dataset, desc="Reading code"))
+    code_snippets = set(
+        item["code"] for item in tqdm(dataset, desc="Reading code")
+    )
     corpus = {i: code for i, code in enumerate(code_snippets)}
 
     print(f"Prepared Corpus: {len(corpus)} unique code snippets.")
@@ -38,8 +42,12 @@ def main():
     config = OmegaConf.load(args.config)
 
     # Select the embedding model: base by default, fine-tuned only when requested
-    model_name = config.finetuned_model_path if args.finetuned else config.model_name
-    print(f"Using {'fine-tuned' if args.finetuned else 'base'} model: {model_name}")
+    model_name = (
+        config.finetuned_model_path if args.finetuned else config.model_name
+    )
+    print(
+        f"Using {'fine-tuned' if args.finetuned else 'base'} model: {model_name}"
+    )
 
     print("--- Preparing Full CoSQA Dataset ---")
     corpus = prepare_cosqa_dataset()

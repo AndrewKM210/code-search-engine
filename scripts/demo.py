@@ -1,13 +1,19 @@
 from argparse import ArgumentParser
+
 from omegaconf import OmegaConf
+
 from cse.search_engine.engine import CodeSearchEngine
 
 
-def run_demo(code_dir, model_name, db_collection, db_path, chunk_size, chunk_overlap):
+def run_demo(
+    code_dir, model_name, db_collection, db_path, chunk_size, chunk_overlap
+):
     print("--- Starting Code Search Demo ---")
 
     # Initialize the search engine
-    engine = CodeSearchEngine(model_name=model_name, db_collection=db_collection, db_path=db_path)
+    engine = CodeSearchEngine(
+        model_name=model_name, db_collection=db_collection, db_path=db_path
+    )
 
     # Index the collection of documents
     engine.index_from_directory(code_dir, chunk_size, chunk_overlap)

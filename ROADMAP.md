@@ -30,6 +30,7 @@ Baseline cleanup so the project runs on any machine and has a real test/CI safet
 - [x] Add a pytest suite: search result formatting, retrieval metrics (MRR/nDCG/recall), payload-key handling, `resolve_device` overrides
 - [x] Add a GitHub Actions workflow running the test suite on every push/PR
 - [x] Restructure entry points: CLI and Streamlit app moved into `apps/`, `scripts/` reserved for one-off/research tooling
+- [x] Add ruff (format + lint) and mypy (type check), wired into a `Makefile` and a separate GitHub Actions lint workflow
 
 **Result carried forward:** fine-tuned embeddings improve retrieval over the base model
 (MRR 0.854 → 0.893, nDCG 0.886 → 0.918, Recall 0.981 → 0.990 on CoSQA validation). Every

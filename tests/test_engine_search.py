@@ -23,16 +23,28 @@ def _make_engine(search_results):
 
 def test_search_formats_results_as_ranked_dicts():
     scored_points = [
-        SimpleNamespace(id=2, score=0.9, payload={"code_content": "def foo(): pass"}),
-        SimpleNamespace(id=5, score=0.5, payload={"code_content": "def bar(): pass"}),
+        SimpleNamespace(
+            id=2, score=0.9, payload={"code_content": "def foo(): pass"}
+        ),
+        SimpleNamespace(
+            id=5, score=0.5, payload={"code_content": "def bar(): pass"}
+        ),
     ]
     engine = _make_engine(scored_points)
 
     results = engine.search("find foo")
 
     assert results == [
-        {"code_id": 2, "score": 0.9, "payload": {"code_content": "def foo(): pass"}},
-        {"code_id": 5, "score": 0.5, "payload": {"code_content": "def bar(): pass"}},
+        {
+            "code_id": 2,
+            "score": 0.9,
+            "payload": {"code_content": "def foo(): pass"},
+        },
+        {
+            "code_id": 5,
+            "score": 0.5,
+            "payload": {"code_content": "def bar(): pass"},
+        },
     ]
 
 

@@ -11,7 +11,10 @@ class _FakeEngine:
 
     _RESULTS = {
         "hit": [{"code_id": 0, "score": 1.0, "payload": {}}],
-        "miss": [{"code_id": 1, "score": 1.0, "payload": {}}, {"code_id": 2, "score": 0.5, "payload": {}}],
+        "miss": [
+            {"code_id": 1, "score": 1.0, "payload": {}},
+            {"code_id": 2, "score": 0.5, "payload": {}},
+        ],
     }
 
     def __init__(self, *args, **kwargs):

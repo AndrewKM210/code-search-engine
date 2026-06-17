@@ -2,6 +2,7 @@ class User:
     """
     A simple class to represent a user in the system.
     """
+
     def __init__(self, username, email):
         self.username = username
         self.email = email

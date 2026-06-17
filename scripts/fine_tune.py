@@ -1,13 +1,18 @@
 import os
 from argparse import ArgumentParser
+
 import mlflow
 import pandas as pd
 from datasets import load_dataset
 from omegaconf import OmegaConf
 from sentence_transformers import SentenceTransformer
 from sentence_transformers.losses import MultipleNegativesRankingLoss
-from sentence_transformers.trainer import SentenceTransformerTrainer, SentenceTransformerTrainingArguments
+from sentence_transformers.trainer import (
+    SentenceTransformerTrainer,
+    SentenceTransformerTrainingArguments,
+)
 from sentence_transformers.training_args import BatchSamplers
+
 from cse.search_engine.utils import extract_function_name
 
 
@@ -31,19 +36,22 @@ def get_fine_tuning_data(fn_names: bool = False):
         # Extract function names
         print("Only using function names.")
         dataset = dataset.map(
-            lambda example: {"function_name": extract_function_name(example["code"])},
+            lambda example: {
+                "function_name": extract_function_name(example["code"])
+            },
             num_proc=4,
         )
 
         # Rename columns to what the loss function expects: "anchor" and "positive"
-        dataset = dataset.rename_columns({"doc": "anchor", "function_name": "positive"}).select_columns(
-            ["anchor", "positive"]
-        )
+        dataset = dataset.rename_columns(
+            {"doc": "anchor", "function_name": "positive"}
+        ).select_columns(["anchor", "positive"])
     else:
         # Rename columns to what the loss function expects: "anchor" and "positive"
         print("Using whole code snippets.")
-        dataset = dataset.rename_columns({"doc": "anchor", "code": "positive"}).select_columns(["anchor", "positive"])
-
+        dataset = dataset.rename_columns(
+            {"doc": "anchor", "code": "positive"}
+        ).select_columns(["anchor", "positive"])
 
     print(f"Created {len(dataset)} positive training examples.")
     return dataset
@@ -83,7 +91,9 @@ def run_fine_tuning(
     mlflow.set_experiment("finetuning")
     with mlflow.start_run(run_name="finetune_run") as run:
         mlflow.log_param("base_model", base_model)
-        print(f"\n--- Starting training... Logging to MLflow run: {run.info.run_id} ---")
+        print(
+            f"\n--- Starting training... Logging to MLflow run: {run.info.run_id} ---"
+        )
         args = SentenceTransformerTrainingArguments(
             output_dir=tuned_model_path + "_checkpoints",
             num_train_epochs=num_epochs,
@@ -125,8 +135,17 @@ def store_loss_from_mlflow(run_id, fn_names):
             return
 
         # Save loss to csv
-        df = pd.DataFrame({"Step": [m.step for m in metrics], "Loss": [m.value for m in metrics]})
-        out_path = "results/losses.csv" if not fn_names else "results/losses_fn_names.csv"
+        df = pd.DataFrame(
+            {
+                "Step": [m.step for m in metrics],
+                "Loss": [m.value for m in metrics],
+            }
+        )
+        out_path = (
+            "results/losses.csv"
+            if not fn_names
+            else "results/losses_fn_names.csv"
+        )
         if not os.path.exists(os.path.split(out_path)[0]):
             os.mkdir(os.path.split(out_path)[0])
         df.to_csv(out_path, index=False)

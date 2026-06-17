@@ -10,7 +10,9 @@ class LLMClient:
         self.llm = ChatOllama(model=model_name, temperature=temperature)
         self.output_parser = StrOutputParser()
 
-    def generate_search_query(self, user_input: str, previous_attempt: str = None) -> str:
+    def generate_search_query(
+        self, user_input: str, previous_attempt: str = None
+    ) -> str:
         """
         Feeds the user's query to the LLM to create the vector DB query.
 
@@ -31,14 +33,20 @@ class LLMClient:
         prompt = ChatPromptTemplate.from_messages(
             [
                 ("system", system_msg),
-                ("user", prompt_text + "\nOutput ONLY the query string, no quotes or explanations."),
+                (
+                    "user",
+                    prompt_text
+                    + "\nOutput ONLY the query string, no quotes or explanations.",
+                ),
             ]
         )
 
         chain = prompt | self.llm | self.output_parser
         return chain.invoke({}).strip()
 
-    def analyze_and_answer(self, user_input: str, retrieved_context: str) -> tuple:
+    def analyze_and_answer(
+        self, user_input: str, retrieved_context: str
+    ) -> tuple:
         """
         Uses the LLM to check if context is sufficient and generate answer or rejection signal.
 
@@ -63,7 +71,10 @@ class LLMClient:
         prompt = ChatPromptTemplate.from_messages(
             [
                 ("system", system_msg),
-                ("user", f"User Question: {user_input}\n\nRetrieved Code Context:\n{retrieved_context}"),
+                (
+                    "user",
+                    f"User Question: {user_input}\n\nRetrieved Code Context:\n{retrieved_context}",
+                ),
             ]
         )
 

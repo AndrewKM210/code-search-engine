@@ -31,6 +31,8 @@ dev = [
     "ipykernel==7.1.0",
     "matplotlib==3.10.7",
     "seaborn==0.13.2",
+    "ruff==0.15.17",
+    "mypy==2.1.0",
 ]
 
 [tool.setuptools.packages.find]
@@ -38,3 +40,17 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 80
+target-version = "py310"
+extend-exclude = ["report.ipynb"]
+
+[tool.ruff.lint]
+extend-select = ["I", "B", "UP"]
+ignore = ["E501"]
+
+[tool.mypy]
+ignore_missing_imports = true
+strict_optional = false
+files = ["src"]

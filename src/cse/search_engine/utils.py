@@ -1,5 +1,6 @@
 import re
 
+
 def extract_function_name(code_body: str) -> str:
     """
     Extracts the function name from a code body string.
@@ -17,7 +18,9 @@ def extract_function_name(code_body: str) -> str:
         return match.group(1)
 
     # Search for common Java/C# method signature: 'methodName(' after type/access modifiers
-    match = re.search(r"(public|private|static|\s)\s+[\w<>,\[\]]+\s+(\w+)\s*\(", code_body)
+    match = re.search(
+        r"(public|private|static|\s)\s+[\w<>,\[\]]+\s+(\w+)\s*\(", code_body
+    )
     if match:
         # The second group captured is the function name
         return match.group(2)

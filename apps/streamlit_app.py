@@ -1,9 +1,11 @@
-import streamlit as st
-from cse.search_engine.engine import CodeSearchEngine
-from cse.agent.llm import LLMClient
-from cse.agent.core import CodingAgent
 from argparse import ArgumentParser
+
+import streamlit as st
 from omegaconf import OmegaConf
+
+from cse.agent.core import CodingAgent
+from cse.agent.llm import LLMClient
+from cse.search_engine.engine import CodeSearchEngine
 
 
 @st.cache_resource
@@ -30,7 +32,11 @@ args = parser.parse_args()
 config = OmegaConf.load(args.config)
 
 # Set page configuration
-st.set_page_config(page_title="AI Code Assistant", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(
+    page_title="AI Code Assistant",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 
 # Set custom CSS styles
 st.markdown(
@@ -72,7 +78,9 @@ with st.sidebar:
 
 # Main chat interface
 st.title("AI Self-Correcting Code Assistant")
-st.caption("I don't just search; I plan, retrieve, and critique my own answers.")
+st.caption(
+    "I don't just search; I plan, retrieve, and critique my own answers."
+)
 
 # Render history
 for message in st.session_state.messages:
@@ -95,7 +103,9 @@ if prompt := st.chat_input("How do I sort a list in Python?"):
         sources_placeholder = st.container()
 
         # Use a container for the "Thinking" process
-        thought_container = st.status("Agent is thinking...", expanded=show_thoughts)
+        thought_container = st.status(
+            "Agent is thinking...", expanded=show_thoughts
+        )
 
         final_answer = ""
         retrieved_code_display = ""
@@ -111,21 +121,33 @@ if prompt := st.chat_input("How do I sort a list in Python?"):
                     thought_container.write(f"**Search:** {step.content}")
                     if step.data:
                         # Capture data for later display but don't clutter the thought stream too much
-                        thought_container.markdown(f"*Found {len(step.data)} candidates*")
+                        thought_container.markdown(
+                            f"*Found {len(step.data)} candidates*"
+                        )
 
                         # Format for saving later
                         for res in step.data:
                             src = res["payload"].get("source", "Unknown")
-                            code = res["payload"].get("content", "") or res["payload"].get("code_content", "")
-                            retrieved_code_display += f"# Source: {src}\n{code}\n\n"
+                            code = res["payload"].get("content", "") or res[
+                                "payload"
+                            ].get("code_content", "")
+                            retrieved_code_display += (
+                                f"# Source: {src}\n{code}\n\n"
+                            )
 
                 elif step.step_type == "critique":
                     thought_container.write(f"**Critique:** {step.content}")
                     if "Refining" in step.content:
-                        thought_container.update(label="Refining Search...", state="running")
+                        thought_container.update(
+                            label="Refining Search...", state="running"
+                        )
 
                 elif step.step_type == "answer":
-                    thought_container.update(label="Reasoning Complete", state="complete", expanded=False)
+                    thought_container.update(
+                        label="Reasoning Complete",
+                        state="complete",
+                        expanded=False,
+                    )
                     final_answer = step.content
 
                 elif step.step_type == "error":
@@ -137,7 +159,9 @@ if prompt := st.chat_input("How do I sort a list in Python?"):
 
             # Show sources (if any)
             if retrieved_code_display:
-                with sources_placeholder.expander("View Retrieved Code Context"):
+                with sources_placeholder.expander(
+                    "View Retrieved Code Context"
+                ):
                     st.code(retrieved_code_display, language="python")
 
             # Save to history
@@ -145,7 +169,9 @@ if prompt := st.chat_input("How do I sort a list in Python?"):
                 {
                     "role": "assistant",
                     "content": final_answer,
-                    "source_code": retrieved_code_display if retrieved_code_display else None,
+                    "source_code": retrieved_code_display
+                    if retrieved_code_display
+                    else None,
                 }
             )
 

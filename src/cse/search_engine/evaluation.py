@@ -1,14 +1,16 @@
 import time
+
 import numpy as np
 from datasets import load_dataset
 from tqdm import tqdm
+
 from cse.search_engine.engine import CodeSearchEngine
 from cse.search_engine.utils import extract_function_name
 
 METRICS_K = 10  # Evaluate metrics @ 10
 
 
-def prepare_cosqa_data(fn_names: bool = False) -> (dict, dict):
+def prepare_cosqa_data(fn_names: bool = False) -> tuple[dict, dict]:
     """
     Loads the CoSQA 'validation' split and prepares it for retrieval evaluation.
 
@@ -25,16 +27,25 @@ def prepare_cosqa_data(fn_names: bool = False) -> (dict, dict):
 
     print("Building unique code corpus...")
     if fn_names:
-        dataset = dataset.map(lambda example: {"function_name": extract_function_name(example["code"])}, num_proc=4)
-        code_snippets = set(item["function_name"] for item in tqdm(dataset, desc="Reading code"))
+        dataset = dataset.map(
+            lambda example: {
+                "function_name": extract_function_name(example["code"])
+            },
+            num_proc=4,
+        )
+        code_snippets = set(
+            item["function_name"] for item in tqdm(dataset, desc="Reading code")
+        )
     else:
-        code_snippets = set(item["code"] for item in tqdm(dataset, desc="Reading code"))
+        code_snippets = set(
+            item["code"] for item in tqdm(dataset, desc="Reading code")
+        )
 
     corpus = {i: code for i, code in enumerate(code_snippets)}
     code_to_id = {code: i for i, code in corpus.items()}
     print(f"Prepared Corpus: {len(corpus)} unique code snippets.")
 
-    eval_queries = {}
+    eval_queries: dict = {}
 
     print("Building validation set...")
     for item in tqdm(dataset, desc="Mapping queries"):
@@ -63,9 +74,9 @@ def run_evaluation(
     eval_queries: dict,
     db_collection: str,
     db_path: str,
-    hnsw_config: dict = {},
-    optimizers_config: dict = {},
-    hnsw_ef = 128,
+    hnsw_config: dict = None,
+    optimizers_config=None,
+    hnsw_ef=128,
     quiet: bool = False,
 ) -> dict:
     """
@@ -108,7 +119,9 @@ def run_evaluation(
 
     start_time = time.time()
 
-    for query, ground_truth_ids in tqdm(eval_queries.items(), desc="Evaluating queries", disable=quiet):
+    for query, ground_truth_ids in tqdm(
+        eval_queries.items(), desc="Evaluating queries", disable=quiet
+    ):
         results = engine.search(query, k=METRICS_K, hnsw_ef=hnsw_ef)
 
         # MRR@k and Recall@k
@@ -126,7 +139,9 @@ def run_evaluation(
 
         # nDCG@k
         dcg_at_k = 0
-        relevance = [1 if res["code_id"] in ground_truth_ids else 0 for res in results]
+        relevance = [
+            1 if res["code_id"] in ground_truth_ids else 0 for res in results
+        ]
 
         for j, rel in enumerate(relevance):
             dcg_at_k += rel / np.log2(j + 2)  # (j+1) rank, +1 for log base
@@ -147,7 +162,8 @@ def run_evaluation(
         f"MRR@{METRICS_K}": np.mean(mrr_at_k_scores),
         f"nDCG@{METRICS_K}": np.mean(ndcg_at_k_scores),
         f"Recall@{METRICS_K}": np.mean(recall_at_k_scores),
-        "Avg. Query Time (ms)": ((end_time - start_time) / total_queries) * 1000,
+        "Avg. Query Time (ms)": ((end_time - start_time) / total_queries)
+        * 1000,
     }
 
     return metrics

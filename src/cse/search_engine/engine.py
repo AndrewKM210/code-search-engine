@@ -1,4 +1,5 @@
-from typing import Any, Dict, List
+from typing import Any
+
 import torch
 from langchain_community.document_loaders import DirectoryLoader, TextLoader
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -38,8 +39,8 @@ class CodeSearchEngine:
         db_collection: str,
         db_path: str,
         db_recreate: bool = False,
-        hnsw_config: Dict = {},
-        optimizers_config: Dict = {},
+        hnsw_config=None,
+        optimizers_config=None,
         device: str = "auto",
         quiet: bool = False,
     ):
@@ -58,7 +59,9 @@ class CodeSearchEngine:
         """
         self.device = resolve_device(device)
         if not quiet:
-            print(f"Initializing engine with model: {model_name} on device: {self.device} and collection: {db_collection}")
+            print(
+                f"Initializing engine with model: {model_name} on device: {self.device} and collection: {db_collection}"
+            )
         self.model_name = model_name
         self.db_collection = db_collection
         self.quiet = quiet
@@ -71,7 +74,9 @@ class CodeSearchEngine:
 
         # Use SentenceTransformer directly for batch encoding and getting dimensions
         self._sbert_model = SentenceTransformer(model_name, device=self.device)
-        self.embedding_dim = self._sbert_model.get_sentence_embedding_dimension()
+        self.embedding_dim = (
+            self._sbert_model.get_sentence_embedding_dimension()
+        )
 
         # Initialize Qdrant client and parameters
         self.qdrant_client = QdrantClient(path=db_path)
@@ -88,23 +93,38 @@ class CodeSearchEngine:
         Args:
             recreate (bool): Recreate the collection even if it already exists.
         """
-        if not self.qdrant_client.collection_exists(self.db_collection) or recreate:
+        if (
+            not self.qdrant_client.collection_exists(self.db_collection)
+            or recreate
+        ):
             try:
                 self.qdrant_client.recreate_collection(
                     collection_name=self.db_collection,
-                    vectors_config=models.VectorParams(size=self.embedding_dim, distance=models.Distance.COSINE),
+                    vectors_config=models.VectorParams(
+                        size=self.embedding_dim, distance=models.Distance.COSINE
+                    ),
                     hnsw_config=models.HnswConfigDiff(**self.hnsw_config),
-                    optimizers_config=models.OptimizersConfigDiff(**self.optimizers_config),
+                    optimizers_config=models.OptimizersConfigDiff(
+                        **self.optimizers_config
+                    ),
                 )
                 if not self.quiet:
-                    print(f"Collection '{self.db_collection}' created successfully.")
+                    print(
+                        f"Collection '{self.db_collection}' created successfully."
+                    )
             except Exception as e:
-                print(f"Could not recreate collection: {e}. It might already exist with compatible settings.")
+                print(
+                    f"Could not recreate collection: {e}. It might already exist with compatible settings."
+                )
         else:
             if not self.quiet:
-                print(f"Collection '{self.db_collection}' already exists. Not recreating collection.")
+                print(
+                    f"Collection '{self.db_collection}' already exists. Not recreating collection."
+                )
 
-    def index_from_directory(self, dir_path: str, chunk_size: int = 1000, chunk_overlap: int = 100):
+    def index_from_directory(
+        self, dir_path: str, chunk_size: int = 1000, chunk_overlap: int = 100
+    ):
         """
         Loads, splits, and indexes all documents from a specified directory.
 
@@ -132,10 +152,14 @@ class CodeSearchEngine:
             return
 
         # Split documents
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=chunk_size, chunk_overlap=chunk_overlap
+        )
         chunks = text_splitter.split_documents(documents)
         if not self.quiet:
-            print(f"Split {len(documents)} documents into {len(chunks)} chunks.")
+            print(
+                f"Split {len(documents)} documents into {len(chunks)} chunks."
+            )
 
         # Embed and prepare points
         points = []
@@ -150,16 +174,23 @@ class CodeSearchEngine:
                 models.PointStruct(
                     id=i,
                     vector=embeddings[i],
-                    payload={"content": chunk.page_content, "source": chunk.metadata.get("source", "unknown")},
+                    payload={
+                        "content": chunk.page_content,
+                        "source": chunk.metadata.get("source", "unknown"),
+                    },
                 )
             )
 
         # Upsert to Qdrant
-        self.qdrant_client.upsert(collection_name=self.db_collection, points=points, wait=True)
+        self.qdrant_client.upsert(
+            collection_name=self.db_collection, points=points, wait=True
+        )
         if not self.quiet:
-            print(f"Successfully indexed {len(points)} chunks into '{self.db_collection}'.")
+            print(
+                f"Successfully indexed {len(points)} chunks into '{self.db_collection}'."
+            )
 
-    def index_corpus(self, corpus: Dict[str, str]):
+    def index_corpus(self, corpus: dict[str, str]):
         """
         Indexes a pre-defined corpus from a dictionary.
 
@@ -174,21 +205,33 @@ class CodeSearchEngine:
         # Embed in batches
         if not self.quiet:
             print(f"Embedding {len(contents)} code snippets...")
-        embeddings = self._sbert_model.encode(contents, batch_size=32, show_progress_bar=not self.quiet)
+        embeddings = self._sbert_model.encode(
+            contents, batch_size=32, show_progress_bar=not self.quiet
+        )
 
         # Prepare points
         points = []
         for i, (code_id, content) in enumerate(corpus.items()):
             points.append(
-                models.PointStruct(id=code_id, vector=embeddings[i].tolist(), payload={"code_content": content})
+                models.PointStruct(
+                    id=code_id,
+                    vector=embeddings[i].tolist(),
+                    payload={"code_content": content},
+                )
             )
 
         # Upsert to Qdrant
-        self.qdrant_client.upsert(collection_name=self.db_collection, points=points, wait=True)
+        self.qdrant_client.upsert(
+            collection_name=self.db_collection, points=points, wait=True
+        )
         if not self.quiet:
-            print(f"Successfully indexed {len(points)} snippets into '{self.db_collection}'.")
+            print(
+                f"Successfully indexed {len(points)} snippets into '{self.db_collection}'."
+            )
 
-    def search(self, text_query: str, k: int = 10, hnsw_ef: int = 128) -> List[Dict[str, Any]]:
+    def search(
+        self, text_query: str, k: int = 10, hnsw_ef: int = 128
+    ) -> list[dict[str, Any]]:
         """
         Searches over the collection by text query.
 
@@ -219,7 +262,11 @@ class CodeSearchEngine:
         formatted_results = []
         for scored_point in search_results:
             formatted_results.append(
-                {"code_id": scored_point.id, "score": scored_point.score, "payload": scored_point.payload}
+                {
+                    "code_id": scored_point.id,
+                    "score": scored_point.score,
+                    "payload": scored_point.payload,
+                }
             )
 
         return formatted_results

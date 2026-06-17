@@ -1,7 +1,9 @@
 import os
 from argparse import ArgumentParser
+
 import pandas as pd
 from omegaconf import OmegaConf
+
 from cse.search_engine.evaluation import prepare_cosqa_data, run_evaluation
 
 
@@ -49,7 +51,8 @@ def main():
     # Compare and store results
     print("\n--- Final Comparison ---")
     df = pd.DataFrame(
-        [finetuned_metrics, fn_names_metrics], index=["Fine-Tuned Model", "Fine-Tuned Model (Function Names)"]
+        [finetuned_metrics, fn_names_metrics],
+        index=["Fine-Tuned Model", "Fine-Tuned Model (Function Names)"],
     )
     print(df.to_markdown(floatfmt=".4f"))
     out_path = "results/evaluation_fn_names.csv"

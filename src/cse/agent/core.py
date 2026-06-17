@@ -1,5 +1,7 @@
+from collections.abc import Generator
 from dataclasses import dataclass
-from typing import Any, Generator
+from typing import Any
+
 from cse.agent.llm import LLMClient
 from cse.search_engine.engine import CodeSearchEngine
 
@@ -40,7 +42,9 @@ class CodingAgent:
             yield AgentStep("plan", "Reasoning about search strategy...")
 
             # If it's a retry, the LLM generates a new query based on failure
-            search_query = self.llm.generate_search_query(user_query, previous_search_query)
+            search_query = self.llm.generate_search_query(
+                user_query, previous_search_query
+            )
             previous_search_query = search_query
 
             yield AgentStep("plan", f"Generated Search Query: '{search_query}'")
@@ -58,16 +62,22 @@ class CodingAgent:
             # Format context for the LLM
             context_str = ""
             for i, res in enumerate(results):
-                code_content = res["payload"].get("content", "") or res["payload"].get("code_content", "")
+                code_content = res["payload"].get("content", "") or res[
+                    "payload"
+                ].get("code_content", "")
                 source = res["payload"].get("source", "Unknown")
                 context_str += f"\n--- Snippet {i + 1} (Source: {source}) ---\n{code_content}\n"
 
             # Pass raw data
-            yield AgentStep("search", "Retrieved candidates from database.", data=results)
+            yield AgentStep(
+                "search", "Retrieved candidates from database.", data=results
+            )
 
             # --- Step 3: Reason & Critique ---
             yield AgentStep("critique", "Analyzing code relevance...")
-            is_sufficient, analysis = self.llm.analyze_and_answer(user_query, context_str)
+            is_sufficient, analysis = self.llm.analyze_and_answer(
+                user_query, context_str
+            )
 
             if is_sufficient:
                 # Success, yield final answer and break loop
@@ -75,9 +85,13 @@ class CodingAgent:
                 return
             else:
                 # Failure, yield critique and loop back
-                yield AgentStep("critique", f"Relevance check failed: {analysis}")
+                yield AgentStep(
+                    "critique", f"Relevance check failed: {analysis}"
+                )
                 yield AgentStep("critique", "Refining search strategy...")
                 attempt += 1
 
         # Fallback if retries exhausted
-        yield AgentStep("error", "Could not find relevant code after multiple attempts.")
+        yield AgentStep(
+            "error", "Could not find relevant code after multiple attempts."
+        )

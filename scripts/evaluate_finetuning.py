@@ -1,7 +1,9 @@
 import os
 from argparse import ArgumentParser
+
 import pandas as pd
 from omegaconf import OmegaConf
+
 from cse.search_engine.evaluation import prepare_cosqa_data, run_evaluation
 
 
@@ -40,7 +42,10 @@ def main():
 
     # Compare and store results
     print("\n--- Final Comparison ---")
-    df = pd.DataFrame([base_metrics, finetuned_metrics], index=["Base Model", "Fine-Tuned Model"])
+    df = pd.DataFrame(
+        [base_metrics, finetuned_metrics],
+        index=["Base Model", "Fine-Tuned Model"],
+    )
     print(df.to_markdown(floatfmt=".4f"))
     out_path = "results/evaluation.csv"
     if not os.path.exists(os.path.split(out_path)[0]):

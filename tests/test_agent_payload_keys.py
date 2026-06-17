@@ -13,7 +13,11 @@ def _make_llm(sufficient=True, query="search query"):
 def test_solve_uses_content_key_when_present():
     engine = MagicMock()
     engine.search.return_value = [
-        {"code_id": 1, "score": 0.9, "payload": {"content": "def from_dir(): pass", "source": "f.py"}}
+        {
+            "code_id": 1,
+            "score": 0.9,
+            "payload": {"content": "def from_dir(): pass", "source": "f.py"},
+        }
     ]
     llm = _make_llm()
     agent = CodingAgent(engine, llm)
@@ -27,7 +31,11 @@ def test_solve_uses_content_key_when_present():
 def test_solve_falls_back_to_code_content_key():
     engine = MagicMock()
     engine.search.return_value = [
-        {"code_id": 1, "score": 0.9, "payload": {"code_content": "def from_corpus(): pass"}}
+        {
+            "code_id": 1,
+            "score": 0.9,
+            "payload": {"code_content": "def from_corpus(): pass"},
+        }
     ]
     llm = _make_llm()
     agent = CodingAgent(engine, llm)
@@ -40,7 +48,9 @@ def test_solve_falls_back_to_code_content_key():
 
 def test_solve_yields_answer_step_on_success():
     engine = MagicMock()
-    engine.search.return_value = [{"code_id": 1, "score": 0.9, "payload": {"content": "x"}}]
+    engine.search.return_value = [
+        {"code_id": 1, "score": 0.9, "payload": {"content": "x"}}
+    ]
     llm = _make_llm(sufficient=True)
     agent = CodingAgent(engine, llm)
 
@@ -52,7 +62,9 @@ def test_solve_yields_answer_step_on_success():
 
 def test_solve_retries_then_errors_when_insufficient():
     engine = MagicMock()
-    engine.search.return_value = [{"code_id": 1, "score": 0.9, "payload": {"content": "x"}}]
+    engine.search.return_value = [
+        {"code_id": 1, "score": 0.9, "payload": {"content": "x"}}
+    ]
     llm = _make_llm(sufficient=False)
     agent = CodingAgent(engine, llm)
 
