@@ -45,7 +45,7 @@ tool to call, and can take multiple steps (search, then read a file, then search
 
 - [x] Add a `self_repo` Qdrant collection name to `main_config.yaml`
 - [x] Add a script that indexes this repository's own source into `self_repo` via `index_from_directory`
-- [ ] Implement a `read_file(path)` tool
+- [x] Implement a `read_file(path)` tool
 - [ ] Implement a `list_directory(path)` tool
 - [ ] Implement a `grep(pattern)` tool
 - [ ] Wrap `CodeSearchEngine.search` as a `search_code(query)` tool with a name/description/args schema
