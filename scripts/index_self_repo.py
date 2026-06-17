@@ -10,7 +10,10 @@ def main():
     parser = ArgumentParser()
     parser.add_argument("--config", type=str, default="config/main_config.yaml")
     parser.add_argument(
-        "--repo_dir", type=str, default=".", help="Path to this repository's root."
+        "--repo_dir",
+        type=str,
+        default=".",
+        help="Path to this repository's root.",
     )
     parser.add_argument(
         "--finetuned",
@@ -21,8 +24,12 @@ def main():
     config = OmegaConf.load(args.config)
 
     # Select the embedding model: base by default, fine-tuned only when requested
-    model_name = config.finetuned_model_path if args.finetuned else config.model_name
-    print(f"Using {'fine-tuned' if args.finetuned else 'base'} model: {model_name}")
+    model_name = (
+        config.finetuned_model_path if args.finetuned else config.model_name
+    )
+    print(
+        f"Using {'fine-tuned' if args.finetuned else 'base'} model: {model_name}"
+    )
 
     print("\n--- Initializing Code Search Engine ---")
     engine = CodeSearchEngine(
