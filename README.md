@@ -98,7 +98,7 @@ Before running the agent, you must index the code dataset into Qdrant.
 Launch the Streamlit frontend to interact with the self-correcting agent:
 
 ```bash
-streamlit run frontend.py
+streamlit run apps/streamlit_app.py
 ```
 
 # Additional
