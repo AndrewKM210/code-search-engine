@@ -1,5 +1,6 @@
 # Local AI Self-Correcting RAG Code Assistant
 
+[![Tests](https://github.com/AndrewKM210/code-search-engine/actions/workflows/tests.yml/badge.svg)](https://github.com/AndrewKM210/code-search-engine/actions/workflows/tests.yml)
 [![Python 3.10.18](https://img.shields.io/badge/Python-3.10.18-blue?logo=python&logoColor=white)](https://www.python.org/)
 [![Qdrant](https://img.shields.io/badge/Qdrant-2E8B57?logo=qdrant&logoColor=white)](https://qdrant.tech/)
 [![Hugging Face](https://img.shields.io/badge/HuggingFace-F3E838?logo=huggingface&logoColor=black)](https://huggingface.co/)
