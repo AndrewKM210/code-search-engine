@@ -80,8 +80,10 @@ class CodeSearchEngine:
 
         # Initialize Qdrant client and parameters
         self.qdrant_client = QdrantClient(path=db_path)
-        self.hnsw_config = hnsw_config
-        self.optimizers_config = optimizers_config
+        self.hnsw_config = hnsw_config if hnsw_config is not None else {}
+        self.optimizers_config = (
+            optimizers_config if optimizers_config is not None else {}
+        )
 
         # Create or recreate the collection
         self._create_collection(db_recreate)
@@ -123,7 +125,11 @@ class CodeSearchEngine:
                 )
 
     def index_from_directory(
-        self, dir_path: str, chunk_size: int = 1000, chunk_overlap: int = 100
+        self,
+        dir_path: str,
+        chunk_size: int = 1000,
+        chunk_overlap: int = 100,
+        glob: str = "**/*.*",
     ):
         """
         Loads, splits, and indexes all documents from a specified directory.
@@ -132,6 +138,7 @@ class CodeSearchEngine:
             dir_path (str): Path to directory with documents.
             chunk_size (int): Size of indexed text chunks.
             chunk_overlap (int): Overlap in characters between chunks.
+            glob (str): Glob pattern selecting which files under dir_path to load.
         """
         if not self.quiet:
             print(f"Indexing documents from directory: {dir_path}")
@@ -139,7 +146,7 @@ class CodeSearchEngine:
         # Load documents
         loader = DirectoryLoader(
             dir_path,
-            glob="**/*.*",
+            glob=glob,
             loader_cls=TextLoader,
             show_progress=True,
             use_multithreading=True,

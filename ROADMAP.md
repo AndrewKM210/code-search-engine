@@ -10,7 +10,7 @@ one-shot baseline rather than assumed to be better.
 | Milestone | Status |
 |---|---|
 | [M0 — Harden the base](#m0--harden-the-base) | ✅ Done |
-| [M1 — Agentic loop + tools](#m1--agentic-loop--tools) | ⬜ Planned |
+| [M1 — Agentic loop + tools](#m1--agentic-loop--tools) | 🚧 In progress |
 | [M2 — Generation eval (LLM-as-judge)](#m2--generation-eval-llm-as-judge) | ⬜ Planned |
 | [M3 — MCP server](#m3--mcp-server) | ⬜ Planned |
 | [M4 — LLM benchmark (local + API)](#m4--llm-benchmark-local--api) | ⬜ Planned |
@@ -43,8 +43,8 @@ later milestone reuses this embedding model.
 Replace the fixed plan→search→critique pipeline with a loop where the LLM chooses which
 tool to call, and can take multiple steps (search, then read a file, then search again).
 
-- [ ] Add a `self_repo` Qdrant collection name to `main_config.yaml`
-- [ ] Add a script that indexes this repository's own source into `self_repo` via `index_from_directory`
+- [x] Add a `self_repo` Qdrant collection name to `main_config.yaml`
+- [x] Add a script that indexes this repository's own source into `self_repo` via `index_from_directory`
 - [ ] Implement a `read_file(path)` tool
 - [ ] Implement a `list_directory(path)` tool
 - [ ] Implement a `grep(pattern)` tool
