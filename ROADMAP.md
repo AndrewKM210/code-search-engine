@@ -48,7 +48,7 @@ tool to call, and can take multiple steps (search, then read a file, then search
 - [x] Implement a `read_file(path)` tool
 - [x] Implement a `list_directory(path)` tool
 - [x] Implement a `grep(pattern)` tool
-- [ ] Wrap `CodeSearchEngine.search` as a `search_code(query)` tool with a name/description/args schema
+- [x] Wrap `CodeSearchEngine.search` as a `search_code(query)` tool with a name/description/args schema
 - [ ] Define a Pydantic schema for a structured tool call (name + arguments)
 - [ ] Add native tool-calling to `LLMClient` (Ollama `tools` param, parse `message.tool_calls`) for models that support it
 - [ ] Add a prompt + JSON-parse fallback tool-calling path for models without native support, with retry on malformed output

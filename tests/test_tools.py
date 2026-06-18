@@ -1,10 +1,14 @@
+from unittest.mock import MagicMock
+
 from cse.agent.tools import (
     MAX_DIR_ENTRIES,
     MAX_FILE_CHARS,
     MAX_GREP_MATCHES,
+    MAX_SEARCH_CHARS,
     grep,
     list_directory,
     read_file,
+    search_code,
 )
 
 
@@ -218,3 +222,80 @@ def test_grep_truncates_many_matches(tmp_path):
 
     assert result.endswith("[truncated]")
     assert len(result.splitlines()) == MAX_GREP_MATCHES + 1
+
+
+def test_search_code_formats_ranked_results():
+    engine = MagicMock()
+    engine.search.return_value = [
+        {
+            "code_id": 1,
+            "score": 0.876,
+            "payload": {"content": "def foo(): pass", "source": "a.py"},
+        },
+        {
+            "code_id": 2,
+            "score": 0.5,
+            "payload": {"content": "def bar(): pass", "source": "b.py"},
+        },
+    ]
+
+    result = search_code("find foo", engine)
+
+    assert result == (
+        "--- Result 1 (source: a.py, score: 0.876) ---\ndef foo(): pass"
+        "\n\n"
+        "--- Result 2 (source: b.py, score: 0.500) ---\ndef bar(): pass"
+    )
+
+
+def test_search_code_passes_query_and_k_to_engine():
+    engine = MagicMock()
+    engine.search.return_value = []
+
+    search_code("a query", engine, k=7)
+
+    engine.search.assert_called_once_with("a query", k=7)
+
+
+def test_search_code_no_results_returns_message():
+    engine = MagicMock()
+    engine.search.return_value = []
+
+    result = search_code("nothing relevant", engine)
+
+    assert result == "No matching code found."
+
+
+def test_search_code_falls_back_to_code_content_payload_key():
+    engine = MagicMock()
+    engine.search.return_value = [
+        {
+            "code_id": 1,
+            "score": 0.9,
+            "payload": {"code_content": "x = 1"},
+        }
+    ]
+
+    result = search_code("anything", engine)
+
+    assert "x = 1" in result
+    assert "source: unknown" in result
+
+
+def test_search_code_truncates_long_output():
+    engine = MagicMock()
+    engine.search.return_value = [
+        {
+            "code_id": 1,
+            "score": 0.9,
+            "payload": {
+                "content": "a" * (MAX_SEARCH_CHARS + 500),
+                "source": "a.py",
+            },
+        }
+    ]
+
+    result = search_code("anything", engine)
+
+    assert len(result) < MAX_SEARCH_CHARS + 500
+    assert result.endswith("[truncated]")

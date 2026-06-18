@@ -1,10 +1,36 @@
 import re
 from pathlib import Path
 
+from cse.search_engine.engine import CodeSearchEngine
+
 MAX_FILE_CHARS = 10_000  # cap how much of a file gets returned to the LLM
 MAX_DIR_ENTRIES = 200  # cap how many directory entries get returned to the LLM
 MAX_GREP_MATCHES = 100  # cap how many grep matches get returned to the LLM
 MAX_GREP_LINE_CHARS = 200  # cap the length of each matched line shown
+MAX_SEARCH_CHARS = (
+    10_000  # cap how much search_code output gets returned to the LLM
+)
+
+SEARCH_CODE_SCHEMA = {
+    "type": "function",
+    "function": {
+        "name": "search_code",
+        "description": (
+            "Searches the indexed codebase for snippets relevant to a "
+            "natural language query."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Natural language description of the code to find.",
+                }
+            },
+            "required": ["query"],
+        },
+    },
+}
 
 
 def _resolve_within(path: str, base_dir: str) -> Path | str:
@@ -163,3 +189,37 @@ def grep(pattern: str, path: str = ".", base_dir: str = ".") -> str:
         result += "\n... [truncated]"
 
     return result
+
+
+def search_code(query: str, engine: CodeSearchEngine, k: int = 5) -> str:
+    """
+    Searches the indexed codebase for snippets relevant to a query.
+
+    Args:
+        query (str): Natural language description of the code to find.
+        engine (CodeSearchEngine): Search engine bound to the indexed collection.
+        k (int): Maximum number of results to return.
+
+    Returns:
+        str: Ranked snippets with their source file and similarity score,
+            or a message if there are no results.
+    """
+    results = engine.search(query, k=k)
+    if not results:
+        return "No matching code found."
+
+    blocks = []
+    for i, res in enumerate(results, start=1):
+        payload = res["payload"]
+        content = payload.get("content") or payload.get("code_content", "")
+        source = payload.get("source", "unknown")
+        blocks.append(
+            f"--- Result {i} (source: {source}, score: {res['score']:.3f}) ---\n"
+            f"{content}"
+        )
+
+    listing = "\n\n".join(blocks)
+    if len(listing) > MAX_SEARCH_CHARS:
+        listing = listing[:MAX_SEARCH_CHARS] + "\n... [truncated]"
+
+    return listing

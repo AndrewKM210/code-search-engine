@@ -1,4 +1,7 @@
-from cse.agent.tools import grep, list_directory, read_file
+from omegaconf import OmegaConf
+
+from cse.agent.tools import grep, list_directory, read_file, search_code
+from cse.search_engine.engine import CodeSearchEngine
 
 print("--- Reading src/cse/agent/tools.py itself ---")
 print(read_file("src/cse/agent/tools.py"))
@@ -32,3 +35,18 @@ print(grep("(unclosed", "src/cse/agent"))
 
 print("\n--- Attempting to escape the project directory ---")
 print(grep("password", ".."))
+
+config = OmegaConf.load("config/main_config.yaml")
+engine = CodeSearchEngine(
+    model_name=config.model_name,
+    db_collection=config.qdrant.self_repo_collection,
+    db_path=config.qdrant.storage_path,
+    device=config.get("device", "auto"),
+    quiet=True,
+)
+
+print("\n--- Searching the self-indexed repo for a coding concept ---")
+print(search_code("how does resolve_device pick a compute device", engine))
+
+print("\n--- Searching for something that won't match anything indexed ---")
+print(search_code("kubernetes helm chart deployment", engine, k=2))
