@@ -30,23 +30,30 @@ class LLMClient:
         system_msg = "You are an expert code retrieval assistant. Your job is to generate ONE concise search query for a vector database."
 
         if previous_attempt:
-            prompt_text = f"The previous query '{previous_attempt}' yielded no relevant results. Generate a DIFFERENT, better search query to find code for: {user_input}"
+            user_msg = (
+                "The previous query '{previous_attempt}' yielded no relevant "
+                "results. Generate a DIFFERENT, better search query to find "
+                "code for: {user_input}"
+                "\nOutput ONLY the query string, no quotes or explanations."
+            )
         else:
-            prompt_text = f"Generate a search query to find code relevant to: {user_input}"
+            user_msg = (
+                "Generate a search query to find code relevant to: {user_input}"
+                "\nOutput ONLY the query string, no quotes or explanations."
+            )
 
         prompt = ChatPromptTemplate.from_messages(
             [
                 ("system", system_msg),
-                (
-                    "user",
-                    prompt_text
-                    + "\nOutput ONLY the query string, no quotes or explanations.",
-                ),
+                ("user", user_msg),
             ]
         )
 
+        # Use template variables so literal braces in user input aren't parsed as placeholders
         chain = prompt | self.llm | self.output_parser
-        return chain.invoke({}).strip()
+        return chain.invoke(
+            {"user_input": user_input, "previous_attempt": previous_attempt}
+        ).strip()
 
     def analyze_and_answer(
         self, user_input: str, retrieved_context: str
@@ -77,13 +84,16 @@ class LLMClient:
                 ("system", system_msg),
                 (
                     "user",
-                    f"User Question: {user_input}\n\nRetrieved Code Context:\n{retrieved_context}",
+                    "User Question: {user_input}\n\nRetrieved Code Context:\n{retrieved_context}",
                 ),
             ]
         )
 
+        # Use template variables so literal braces in retrieved code aren't parsed as placeholders
         chain = prompt | self.llm | self.output_parser
-        response = chain.invoke({})
+        response = chain.invoke(
+            {"user_input": user_input, "retrieved_context": retrieved_context}
+        )
 
         if response.startswith("MATCH:"):
             return True, response.replace("MATCH:", "").strip()
