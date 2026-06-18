@@ -12,14 +12,26 @@ def main():
     # Parse arguments and config file
     parser = ArgumentParser()
     parser.add_argument("--config", type=str, default="config/main_config.yaml")
+    parser.add_argument(
+        "--finetuned",
+        action="store_true",
+        help="Search using the fine-tuned model, defaults to the base model.",
+    )
     args = parser.parse_args()
     config = OmegaConf.load(args.config)
 
+    # Select the embedding model: base by default, fine-tuned only when requested
+    model_name = (
+        config.finetuned_model_path if args.finetuned else config.model_name
+    )
+
     # Initialize components
     try:
-        print("--- Loading Search Engine (Qdrant + SBERT) ---")
+        print(
+            f"--- Loading Search Engine (Qdrant + SBERT), using {'fine-tuned' if args.finetuned else 'base'} model: {model_name} ---"
+        )
         engine = CodeSearchEngine(
-            model_name=config.finetuned_model_path,
+            model_name=model_name,
             db_collection=config.qdrant.full_collection,
             db_path=config.qdrant.storage_path,
             device=config.get("device", "auto"),
