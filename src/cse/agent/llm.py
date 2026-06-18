@@ -7,7 +7,11 @@ class LLMClient:
     """Wraps the local Ollama model to handle reasoning and generation."""
 
     def __init__(self, model_name="phi3", temperature=0.1):
-        self.llm = ChatOllama(model=model_name, temperature=temperature)
+        self.llm = ChatOllama(
+            model=model_name,
+            temperature=temperature,
+            validate_model_on_init=True,
+        )
         self.output_parser = StrOutputParser()
 
     def generate_search_query(
