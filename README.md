@@ -11,6 +11,14 @@
 
 This project implements a Retrieval-Augmented Generation (RAG) agent designed to answer programming queries by utilizing a semantic vector database and a local Large Language Model (LLM) with a self-correction mechanism.
 
+> **Active development:** this project is being grown from a one-shot RAG assistant into a
+> full **agentic coding assistant**: an LLM that chooses tools (semantic search, read file,
+> list directory, grep) to navigate a codebase, measured against the original pipeline as a
+> baseline rather than assumed to be better. The work is tracked milestone by milestone in
+> [ROADMAP.md](ROADMAP.md): M0 (harden the base) is done and M1 (agentic loop + tools) is in
+> progress, with generation evals, an MCP server, a local/API model benchmark, and a QLoRA
+> fine-tune capstone planned next.
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/demo_dark.gif">
   <img src="assets/demo_light.gif" alt="Animated demonstration of the agent in action.">
