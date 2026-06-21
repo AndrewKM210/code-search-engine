@@ -1,6 +1,10 @@
+from typing import Any
+
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_ollama import ChatOllama
+
+from cse.agent.schema import ToolCall
 
 
 class LLMClient:
@@ -13,6 +17,49 @@ class LLMClient:
             validate_model_on_init=True,
         )
         self.output_parser = StrOutputParser()
+
+    def call_with_tools(
+        self, messages: list, tools: list
+    ) -> tuple[str, list[ToolCall]]:
+        """
+        Sends messages to the model with tools available via native tool calling.
+
+        Binds the tool definitions so a tool-capable model (e.g.
+        llama3.2:3b) can decide to call one. Models without native tool
+        support need the prompt+JSON fallback path instead.
+
+        Args:
+            messages (list): Conversation so far, as LangChain messages or
+                (role, content) tuples.
+            tools (list): Tool definitions to expose, in any form
+                ChatOllama.bind_tools accepts (functions, Pydantic models or
+                OpenAI-style dicts).
+
+        Returns:
+            tuple: (content, tool_calls), where tool_calls is empty when the
+                model answers directly instead of requesting a tool.
+        """
+        response = self.llm.bind_tools(tools).invoke(messages)
+        return response.content, self._parse_tool_calls(response.tool_calls)
+
+    @staticmethod
+    def _parse_tool_calls(
+        raw_tool_calls: list[dict[str, Any]],
+    ) -> list[ToolCall]:
+        """
+        Normalizes LangChain tool-call dicts into validated ToolCall objects.
+
+        Args:
+            raw_tool_calls (list): Each item is a dict with "name" and "args",
+                as found on an AIMessage's tool_calls attribute.
+
+        Returns:
+            list[ToolCall]: One validated ToolCall per requested invocation.
+        """
+        return [
+            ToolCall(name=tc["name"], arguments=tc.get("args") or {})
+            for tc in raw_tool_calls
+        ]
 
     def generate_search_query(
         self, user_input: str, previous_attempt: str = None
