@@ -32,6 +32,76 @@ SEARCH_CODE_SCHEMA = {
     },
 }
 
+READ_FILE_SCHEMA = {
+    "type": "function",
+    "function": {
+        "name": "read_file",
+        "description": "Reads the full contents of a file in the repository.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "File path relative to the repository root.",
+                }
+            },
+            "required": ["path"],
+        },
+    },
+}
+
+LIST_DIRECTORY_SCHEMA = {
+    "type": "function",
+    "function": {
+        "name": "list_directory",
+        "description": (
+            "Lists the files and subdirectories of a directory in the repository."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Directory path relative to the repository root.",
+                }
+            },
+            "required": [],
+        },
+    },
+}
+
+GREP_SCHEMA = {
+    "type": "function",
+    "function": {
+        "name": "grep",
+        "description": (
+            "Searches file contents in the repository for a regular expression."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "pattern": {
+                    "type": "string",
+                    "description": "Regular expression to search for.",
+                },
+                "path": {
+                    "type": "string",
+                    "description": "File or directory to search, relative to the repository root.",
+                },
+            },
+            "required": ["pattern"],
+        },
+    },
+}
+
+# All tool schemas, in the OpenAI-style dict shape used by LLMClient.call_with_tools*
+TOOL_SPECS = [
+    SEARCH_CODE_SCHEMA,
+    READ_FILE_SCHEMA,
+    LIST_DIRECTORY_SCHEMA,
+    GREP_SCHEMA,
+]
+
 
 def _resolve_within(path: str, base_dir: str) -> Path | str:
     """
