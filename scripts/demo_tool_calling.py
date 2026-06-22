@@ -1,6 +1,8 @@
 from argparse import ArgumentParser
 
-from cse.agent.llm import LLMClient
+from omegaconf import OmegaConf
+
+from cse.agent.llm import LLMClient, resolve_native_tool_calling
 
 # Minimal OpenAI-style specs exposing only each tool's semantic args
 # (engine/base_dir stay bound by the agent loop, hidden from the model)
@@ -89,30 +91,30 @@ QUERIES = [
 
 
 def main():
-    # llama3.2:3b emits native tool_calls; qwen2.5-coder:3b and phi3 instead
-    # need the prompt+JSON fallback path (--fallback)
+    # Whether to use native tool calling or the prompt+JSON fallback is
+    # decided per-model by config/llm_config.yaml, not chosen manually here
     parser = ArgumentParser()
     parser.add_argument("--model", type=str, default="llama3.2:3b")
     parser.add_argument(
-        "--fallback",
-        action="store_true",
-        help="Use the prompt+JSON fallback instead of native tool calling.",
+        "--llm-config", type=str, default="config/llm_config.yaml"
     )
     args = parser.parse_args()
+    llm_config = OmegaConf.load(args.llm_config)
 
-    mode = "fallback (prompt+JSON)" if args.fallback else "native"
+    mode = (
+        "native"
+        if resolve_native_tool_calling(args.model, llm_config)
+        else "fallback (prompt+JSON)"
+    )
     print(f"--- {mode} tool calling with {args.model} ---")
     llm = LLMClient(model_name=args.model)
 
     for query in QUERIES:
         print(f"\n=== User: {query} ===")
         messages = [("system", SYSTEM_MSG), ("user", query)]
-        if args.fallback:
-            content, tool_calls = llm.call_with_tools_fallback(
-                messages, TOOL_SPECS
-            )
-        else:
-            content, tool_calls = llm.call_with_tools(messages, TOOL_SPECS)
+        content, tool_calls = llm.call_with_tools_auto(
+            messages, TOOL_SPECS, llm_config
+        )
 
         if tool_calls:
             for call in tool_calls:

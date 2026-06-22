@@ -1,9 +1,12 @@
 from unittest.mock import MagicMock
 
+from omegaconf import OmegaConf
+
 from cse.agent.llm import (
     LLMClient,
     _extract_tool_call,
     _format_tool_instructions,
+    resolve_native_tool_calling,
 )
 from cse.agent.schema import ToolCall
 
@@ -23,12 +26,23 @@ TOOLS = [
 ]
 
 
-def _client_with_mock_llm(*responses):
+def _client_with_mock_llm(*responses, model_name="phi3"):
     """Builds an LLMClient whose self.llm.invoke yields the given contents in order."""
     client = object.__new__(LLMClient)
+    client.model_name = model_name
     client.llm = MagicMock()
     client.llm.invoke.side_effect = [MagicMock(content=r) for r in responses]
     return client
+
+
+LLM_CONFIG = OmegaConf.create(
+    {
+        "models": {
+            "llama3.2:3b": {"native_tool_calling": True},
+            "phi3": {"native_tool_calling": False},
+        }
+    }
+)
 
 
 def test_parse_tool_calls_single():
@@ -97,7 +111,7 @@ def test_call_with_tools_fallback_parses_valid_json_first_try():
         '{"name": "search_code", "arguments": {"query": "device"}}'
     )
 
-    content, calls = client.call_with_tools_fallback(
+    _, calls = client.call_with_tools_fallback(
         [("user", "find the device resolver")], TOOLS
     )
 
@@ -123,7 +137,7 @@ def test_call_with_tools_fallback_retries_malformed_json():
         '{"name": "search_code", "arguments": {"query": "device"}}',
     )
 
-    content, calls = client.call_with_tools_fallback(
+    _, calls = client.call_with_tools_fallback(
         [("user", "find the device resolver")], TOOLS
     )
 
@@ -143,3 +157,45 @@ def test_call_with_tools_fallback_gives_up_after_max_retries():
     assert calls == []
     assert content == '{"broken'
     assert client.llm.invoke.call_count == 3
+
+
+def test_resolve_native_tool_calling_true_for_listed_model():
+    assert resolve_native_tool_calling("llama3.2:3b", LLM_CONFIG) is True
+
+
+def test_resolve_native_tool_calling_false_for_listed_model():
+    assert resolve_native_tool_calling("phi3", LLM_CONFIG) is False
+
+
+def test_resolve_native_tool_calling_defaults_false_for_unlisted_model():
+    assert (
+        resolve_native_tool_calling("some-unknown-model", LLM_CONFIG) is False
+    )
+
+
+def test_call_with_tools_auto_uses_native_path_when_configured():
+    client = _client_with_mock_llm(model_name="llama3.2:3b")
+    client.call_with_tools = MagicMock(
+        return_value=("", [ToolCall(name="grep")])
+    )
+    client.call_with_tools_fallback = MagicMock()
+
+    _, calls = client.call_with_tools_auto([("user", "hi")], TOOLS, LLM_CONFIG)
+
+    client.call_with_tools.assert_called_once()
+    client.call_with_tools_fallback.assert_not_called()
+    assert calls == [ToolCall(name="grep")]
+
+
+def test_call_with_tools_auto_uses_fallback_path_for_unlisted_model():
+    client = _client_with_mock_llm(model_name="some-unknown-model")
+    client.call_with_tools = MagicMock()
+    client.call_with_tools_fallback = MagicMock(
+        return_value=("", [ToolCall(name="grep")])
+    )
+
+    _, calls = client.call_with_tools_auto([("user", "hi")], TOOLS, LLM_CONFIG)
+
+    client.call_with_tools_fallback.assert_called_once()
+    client.call_with_tools.assert_not_called()
+    assert calls == [ToolCall(name="grep")]

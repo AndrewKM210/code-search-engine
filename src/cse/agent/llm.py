@@ -16,6 +16,7 @@ class LLMClient:
     """Wraps the local Ollama model to handle reasoning and generation."""
 
     def __init__(self, model_name="phi3", temperature=0.1):
+        self.model_name = model_name
         self.llm = ChatOllama(
             model=model_name,
             temperature=temperature,
@@ -114,6 +115,33 @@ class LLMClient:
 
         return content, []
 
+    def call_with_tools_auto(
+        self, messages: list, tools: list, llm_config, max_retries: int = 2
+    ) -> tuple[str, list[ToolCall]]:
+        """
+        Calls a tool, picking native or prompt+JSON fallback based on config.
+
+        Looks up this client's model in llm_config to avoid callers having
+        to know or hardcode which models support native tool calling.
+
+        Args:
+            messages (list): Conversation so far, as (role, content) tuples.
+            tools (list): Tool definitions, in the same OpenAI-style dicts
+                used by call_with_tools.
+            llm_config: Loaded llm_config.yaml (OmegaConf), with a "models"
+                map of model name to capability flags.
+            max_retries (int): Forwarded to call_with_tools_fallback.
+
+        Returns:
+            tuple: (content, tool_calls), where tool_calls is empty when the
+                model answers directly or never produces a valid call.
+        """
+        if resolve_native_tool_calling(self.model_name, llm_config):
+            return self.call_with_tools(messages, tools)
+        return self.call_with_tools_fallback(
+            messages, tools, max_retries=max_retries
+        )
+
     def generate_search_query(
         self, user_input: str, previous_attempt: str = None
     ) -> str:
@@ -199,6 +227,25 @@ class LLMClient:
             return True, response.replace("MATCH:", "").strip()
         else:
             return False, response.replace("MISSING:", "").strip()
+
+
+def resolve_native_tool_calling(model_name: str, llm_config) -> bool:
+    """
+    Looks up whether a model supports native tool calling.
+
+    Args:
+        model_name (str): Ollama model name, e.g. "llama3.2:3b".
+        llm_config: Loaded llm_config.yaml (OmegaConf), with a "models" map
+            of model name to capability flags.
+
+    Returns:
+        bool: True if the model is listed with native_tool_calling: true.
+            Defaults to False (use the JSON fallback) for unlisted models.
+    """
+    model_cfg = llm_config.models.get(model_name)
+    if model_cfg is None:
+        return False
+    return bool(model_cfg.get("native_tool_calling", False))
 
 
 def _format_tool_instructions(tools: list[dict]) -> str:
