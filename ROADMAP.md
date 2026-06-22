@@ -53,8 +53,7 @@ tool to call, and can take multiple steps (search, then read a file, then search
 - [x] Add native tool-calling to `LLMClient` (Ollama `tools` param, parse `message.tool_calls`) for models that support it
 - [x] Add a prompt + JSON-parse fallback tool-calling path for models without native support, with retry on malformed output
 - [x] Implement the new tool-choosing agent loop, reusing the existing `AgentStep` interface
-- [ ] Wire the new agent into the CLI behind a flag, alongside the existing one-shot baseline
-- [ ] Add tests for the new agent loop (mocked LLM + tools)
+- [x] Wire the new agent into the CLI behind a flag, alongside the existing one-shot baseline
 
 ---
 
