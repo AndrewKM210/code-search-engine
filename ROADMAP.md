@@ -10,7 +10,7 @@ one-shot baseline rather than assumed to be better.
 | Milestone | Status |
 |---|---|
 | [M0 — Harden the base](#m0--harden-the-base) | ✅ Done |
-| [M1 — Agentic loop + tools](#m1--agentic-loop--tools) | ⬜ Planned |
+| [M1 — Agentic loop + tools](#m1--agentic-loop--tools) | 🚧 In progress |
 | [M2 — Generation eval (LLM-as-judge)](#m2--generation-eval-llm-as-judge) | ⬜ Planned |
 | [M3 — MCP server](#m3--mcp-server) | ⬜ Planned |
 | [M4 — LLM benchmark (local + API)](#m4--llm-benchmark-local--api) | ⬜ Planned |
@@ -43,18 +43,17 @@ later milestone reuses this embedding model.
 Replace the fixed plan→search→critique pipeline with a loop where the LLM chooses which
 tool to call, and can take multiple steps (search, then read a file, then search again).
 
-- [ ] Add a `self_repo` Qdrant collection name to `main_config.yaml`
-- [ ] Add a script that indexes this repository's own source into `self_repo` via `index_from_directory`
-- [ ] Implement a `read_file(path)` tool
-- [ ] Implement a `list_directory(path)` tool
-- [ ] Implement a `grep(pattern)` tool
-- [ ] Wrap `CodeSearchEngine.search` as a `search_code(query)` tool with a name/description/args schema
-- [ ] Define a Pydantic schema for a structured tool call (name + arguments)
-- [ ] Add native tool-calling to `LLMClient` (Ollama `tools` param, parse `message.tool_calls`) for models that support it
-- [ ] Add a prompt + JSON-parse fallback tool-calling path for models without native support, with retry on malformed output
-- [ ] Implement the new tool-choosing agent loop, reusing the existing `AgentStep` interface
-- [ ] Wire the new agent into the CLI behind a flag, alongside the existing one-shot baseline
-- [ ] Add tests for the new agent loop (mocked LLM + tools)
+- [x] Add a `self_repo` Qdrant collection name to `main_config.yaml`
+- [x] Add a script that indexes this repository's own source into `self_repo` via `index_from_directory`
+- [x] Implement a `read_file(path)` tool
+- [x] Implement a `list_directory(path)` tool
+- [x] Implement a `grep(pattern)` tool
+- [x] Wrap `CodeSearchEngine.search` as a `search_code(query)` tool with a name/description/args schema
+- [x] Define a Pydantic schema for a structured tool call (name + arguments)
+- [x] Add native tool-calling to `LLMClient` (Ollama `tools` param, parse `message.tool_calls`) for models that support it
+- [x] Add a prompt + JSON-parse fallback tool-calling path for models without native support, with retry on malformed output
+- [x] Implement the new tool-choosing agent loop, reusing the existing `AgentStep` interface
+- [x] Wire the new agent into the CLI behind a flag, alongside the existing one-shot baseline
 
 ---
 

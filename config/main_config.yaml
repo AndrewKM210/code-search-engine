@@ -7,6 +7,7 @@ device: "auto"                                  # Compute device for embeddings:
 qdrant:
   storage_path: "./qdrant_storage"              # Path where Qdrant vector database is stored
   demo_collection: "demo_code_collection"       # Name of Qdrant collection for the demo code
+  self_repo_collection: "self_repo"             # Name of Qdrant collection for this repo's own source
   full_collection: "cosqa_full"                 # Name of Qdrant collection for the complete CoSQA dataset
   eval_base_collection: "cosqa_base"            # Name of Qdrant collection for the CoSQA evaluation split
   eval_finetuned_collection: "cosqa_finetuned"  # Name of Qdrant collection for the CoSQA train split

@@ -1,9 +1,25 @@
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from dataclasses import dataclass
 from typing import Any
 
 from cse.agent.llm import LLMClient
+from cse.agent.schema import ToolCall
+from cse.agent.tools import (
+    TOOL_SPECS,
+    grep,
+    list_directory,
+    read_file,
+    search_code,
+)
 from cse.search_engine.engine import CodeSearchEngine
+
+TOOL_LOOP_SYSTEM_MSG = (
+    "You are a coding assistant exploring a repository. Use the available "
+    "tools (search_code, read_file, list_directory, grep) to find the "
+    "information needed to answer the user's question. Once you have "
+    "enough information, answer the question directly in plain text "
+    "instead of calling another tool."
+)
 
 
 @dataclass
@@ -95,3 +111,89 @@ class CodingAgent:
         yield AgentStep(
             "error", "Could not find relevant code after multiple attempts."
         )
+
+
+class ToolCallingAgent:
+    """Agentic loop where the LLM chooses which tool to call until it can answer."""
+
+    def __init__(
+        self,
+        engine: CodeSearchEngine,
+        llm: LLMClient,
+        llm_config,
+        base_dir: str = ".",
+        max_steps: int = 6,
+    ):
+        self.llm = llm
+        self.llm_config = llm_config
+        self.max_steps = max_steps
+        self.tools: dict[str, Callable[..., str]] = {
+            "search_code": lambda query: search_code(query, engine),
+            "read_file": lambda path: read_file(path, base_dir),
+            "list_directory": lambda path=".": list_directory(path, base_dir),
+            "grep": lambda pattern, path=".": grep(pattern, path, base_dir),
+        }
+
+    def solve(self, user_query: str) -> Generator[AgentStep, None, None]:
+        """
+        The tool-choosing agentic loop. Yields steps for real-time rendering.
+
+        Args:
+            user_query (str): Input query.
+
+        Returns:
+            Generator[AgentStep]: Contains all the steps the agent has done.
+        """
+        yield AgentStep("start", f"Processing request: {user_query}")
+        conversation = [
+            ("system", TOOL_LOOP_SYSTEM_MSG),
+            ("user", user_query),
+        ]
+
+        for _ in range(self.max_steps):
+            yield AgentStep("plan", "Deciding next action...")
+            content, tool_calls = self.llm.call_with_tools_auto(
+                conversation, TOOL_SPECS, self.llm_config
+            )
+
+            if not tool_calls:
+                yield AgentStep("answer", content)
+                return
+
+            for call in tool_calls:
+                yield AgentStep(
+                    "tool_call", f"Calling {call.name}({call.arguments})"
+                )
+                result = self._run_tool(call)
+                yield AgentStep("tool_result", result)
+
+                conversation.append(
+                    ("assistant", f"Calling tool {call.name}({call.arguments})")
+                )
+                conversation.append(
+                    ("user", f"Result of {call.name}:\n{result}")
+                )
+
+        yield AgentStep(
+            "error", "Could not produce an answer within the step limit."
+        )
+
+    def _run_tool(self, call: ToolCall) -> str:
+        """
+        Runs a single tool call, isolating bad arguments from the loop.
+
+        Args:
+            call (ToolCall): The tool name and arguments requested by the LLM.
+
+        Returns:
+            str: The tool's output, or a human-readable error message
+                starting with "Error:" if the tool name or arguments are bad.
+        """
+        tool = self.tools.get(call.name)
+        if tool is None:
+            return f"Error: unknown tool '{call.name}'."
+
+        try:
+            return tool(**call.arguments)
+        except TypeError as e:
+            return f"Error: invalid arguments for '{call.name}': {e}."
