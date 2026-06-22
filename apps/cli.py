@@ -1,15 +1,12 @@
 import time
 from argparse import ArgumentParser
 
-from omegaconf import OmegaConf
-
-from cse.agent.core import CodingAgent, ToolCallingAgent
-from cse.agent.llm import LLMClient
-from cse.search_engine.engine import CodeSearchEngine
+from cse.agent.presenter import describe_step
+from cse.agent.setup import AgentOptions, build_agent
 
 
 def main():
-    # Parse arguments and config file
+    # Parse arguments
     parser = ArgumentParser()
     parser.add_argument("--config", type=str, default="config/main_config.yaml")
     parser.add_argument(
@@ -36,48 +33,26 @@ def main():
         help="Per-model tool-calling capabilities, used by --agent tool-loop.",
     )
     args = parser.parse_args()
-    config = OmegaConf.load(args.config)
 
-    # Select the embedding model: base by default, fine-tuned only when requested
-    model_name = (
-        config.finetuned_model_path if args.finetuned else config.model_name
-    )
-
-    # The tool-loop agent explores this repo's own source via read_file/list_directory/grep,
-    # so it must search the self-indexed collection rather than the CoSQA corpus
-    db_collection = (
-        config.qdrant.self_repo_collection
-        if args.agent == "tool-loop"
-        else config.qdrant.full_collection
+    options = AgentOptions(
+        finetuned=args.finetuned,
+        agent_type=args.agent,
+        model=args.model,
+        config_path=args.config,
+        llm_config_path=args.llm_config,
     )
 
     # Initialize components
-    try:
-        print(
-            f"--- Loading Search Engine (Qdrant + SBERT), using {'fine-tuned' if args.finetuned else 'base'} model: {model_name} ---"
-        )
-        engine = CodeSearchEngine(
-            model_name=model_name,
-            db_collection=db_collection,
-            db_path=config.qdrant.storage_path,
-            device=config.get("device", "auto"),
-        )
-
-        print(f"\n--- Loading LLM (Ollama/{args.model}) ---")
-        llm = LLMClient(model_name=args.model)
-
-        if args.agent == "tool-loop":
-            print("--- Initializing Tool-Choosing Agent ---")
-            llm_config = OmegaConf.load(args.llm_config)
-            agent = ToolCallingAgent(engine, llm, llm_config)
-        else:
-            print("--- Initializing Self-Correcting Code Agent ---")
-            agent = CodingAgent(engine, llm)
-        print("System Ready.\n")
-
-    except Exception as e:
-        print(f"Initialization Failed: {e}")
-        exit(-1)
+    agent = None
+    for setup_step in build_agent(options):
+        if setup_step.step_type == "status":
+            print(f"--- {setup_step.content} ---")
+        elif setup_step.step_type == "ready":
+            agent = setup_step.agent
+        elif setup_step.step_type == "error":
+            print(f"Initialization Failed: {setup_step.content}")
+            exit(-1)
+    print("System Ready.\n")
 
     # Interactive loop
     while True:
@@ -91,28 +66,14 @@ def main():
 
         # Print all steps the agent takes to answer
         for step in agent.solve(user_query):
-            if step.step_type == "plan":
-                print(f"[PLAN] {step.content}")
-
-            elif step.step_type == "search":
-                print(f"[SEARCH] {step.content}")
-                if step.data:
-                    print(f"    Found {len(step.data)} snippets.")
-
-            elif step.step_type == "critique":
-                print(f"[CRITIQUE] {step.content}")
-
-            elif step.step_type == "tool_call":
-                print(f"[TOOL CALL] {step.content}")
-
-            elif step.step_type == "tool_result":
-                print(f"[TOOL RESULT] {step.content}")
-
+            label, text = describe_step(step)
+            if step.step_type == "search" and step.data:
+                print(f"[{label}] {text}")
+                print(f"    Found {len(step.data)} snippets.")
             elif step.step_type == "answer":
-                print(f"\n[ANSWER]:\n{step.content}")
-
-            elif step.step_type == "error":
-                print(f"[ERROR] {step.content}")
+                print(f"\n[{label}]:\n{text}")
+            else:
+                print(f"[{label}] {text}")
 
         print(f"\n(Time elapsed: {time.time() - start_time:.2f}s)")
         print("-" * 50)
