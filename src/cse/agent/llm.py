@@ -1,10 +1,15 @@
+import re
 from typing import Any
 
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_ollama import ChatOllama
+from pydantic import ValidationError
 
 from cse.agent.schema import ToolCall
+
+# Matches a ```json ... ``` or ``` ... ``` fence wrapping the JSON payload
+_CODE_FENCE_RE = re.compile(r"^```(?:json)?\s*\n?(.*?)\n?```$", re.DOTALL)
 
 
 class LLMClient:
@@ -60,6 +65,54 @@ class LLMClient:
             ToolCall(name=tc["name"], arguments=tc.get("args") or {})
             for tc in raw_tool_calls
         ]
+
+    def call_with_tools_fallback(
+        self, messages: list, tools: list, max_retries: int = 2
+    ) -> tuple[str, list[ToolCall]]:
+        """
+        Sends messages to a model without reliable native tool calling,
+        asking it to emit a tool call as JSON text instead.
+
+        Some models (e.g. phi3, qwen2.5-coder:3b) either lack native tool
+        support or return the call as JSON text rather than populating
+        tool_calls. This prepends a system message describing the tools and
+        the expected JSON shape, then parses the model's raw text response.
+        If the response looks like a failed JSON attempt, it retries with a
+        corrective message instead of giving up immediately.
+
+        Args:
+            messages (list): Conversation so far, as (role, content) tuples.
+            tools (list): Tool definitions, in the same OpenAI-style dicts
+                used by call_with_tools.
+            max_retries (int): Extra attempts allowed after a malformed
+                response, before giving up and returning plain text.
+
+        Returns:
+            tuple: (content, tool_calls), where tool_calls is empty when the
+                model answers directly or never produces a valid call.
+        """
+        conversation = [("system", _format_tool_instructions(tools)), *messages]
+
+        for _ in range(max_retries + 1):
+            content = self.llm.invoke(conversation).content.strip()
+
+            tool_call = _extract_tool_call(content)
+            if tool_call is not None:
+                return content, [tool_call]
+
+            if not content.lstrip().startswith(("{", "```")):
+                return content, []
+
+            conversation.append(("assistant", content))
+            conversation.append(
+                (
+                    "user",
+                    "That wasn't valid JSON for a tool call. Respond with "
+                    'ONLY a JSON object: {"name": "...", "arguments": {...}}.',
+                )
+            )
+
+        return content, []
 
     def generate_search_query(
         self, user_input: str, previous_attempt: str = None
@@ -146,3 +199,55 @@ class LLMClient:
             return True, response.replace("MATCH:", "").strip()
         else:
             return False, response.replace("MISSING:", "").strip()
+
+
+def _format_tool_instructions(tools: list[dict]) -> str:
+    """
+    Renders OpenAI-style tool specs into a plain-text system instruction.
+
+    Args:
+        tools (list): Tool definitions in the OpenAI-style dict shape used
+            by call_with_tools (each with a "function" key holding name,
+            description and parameters).
+
+    Returns:
+        str: Instructions telling the model how to request a tool as JSON,
+            followed by one line per available tool.
+    """
+    lines = [
+        "You can call one of the following tools to help answer the user. "
+        "If a tool is useful, respond with ONLY a JSON object of the form "
+        '{"name": "<tool_name>", "arguments": {<arg_name>: <value>, ...}}. '
+        "If no tool is needed, answer normally in plain text.",
+        "",
+        "Available tools:",
+    ]
+    for tool in tools:
+        spec = tool["function"]
+        params = ", ".join(spec["parameters"]["properties"])
+        lines.append(f"- {spec['name']}({params}): {spec['description']}")
+
+    return "\n".join(lines)
+
+
+def _extract_tool_call(text: str) -> ToolCall | None:
+    """
+    Parses a model's raw text response into a ToolCall, if it is one.
+
+    Args:
+        text (str): The model's response, optionally wrapped in a markdown
+            code fence around the JSON payload.
+
+    Returns:
+        ToolCall | None: The parsed tool call, or None if the text isn't a
+            valid ToolCall JSON object.
+    """
+    text = text.strip()
+    fenced = _CODE_FENCE_RE.match(text)
+    if fenced:
+        text = fenced.group(1).strip()
+
+    try:
+        return ToolCall.model_validate_json(text)
+    except ValidationError:
+        return None

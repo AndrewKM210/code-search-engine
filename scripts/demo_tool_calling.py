@@ -89,25 +89,36 @@ QUERIES = [
 
 
 def main():
-    # llama3.2:3b emits native tool_calls; qwen2.5-coder:3b instead returns
-    # the call as JSON text (handled by the prompt+JSON fallback path)
+    # llama3.2:3b emits native tool_calls; qwen2.5-coder:3b and phi3 instead
+    # need the prompt+JSON fallback path (--fallback)
     parser = ArgumentParser()
     parser.add_argument("--model", type=str, default="llama3.2:3b")
+    parser.add_argument(
+        "--fallback",
+        action="store_true",
+        help="Use the prompt+JSON fallback instead of native tool calling.",
+    )
     args = parser.parse_args()
 
-    print(f"--- Native tool calling with {args.model} ---")
+    mode = "fallback (prompt+JSON)" if args.fallback else "native"
+    print(f"--- {mode} tool calling with {args.model} ---")
     llm = LLMClient(model_name=args.model)
 
     for query in QUERIES:
         print(f"\n=== User: {query} ===")
         messages = [("system", SYSTEM_MSG), ("user", query)]
-        content, tool_calls = llm.call_with_tools(messages, TOOL_SPECS)
+        if args.fallback:
+            content, tool_calls = llm.call_with_tools_fallback(
+                messages, TOOL_SPECS
+            )
+        else:
+            content, tool_calls = llm.call_with_tools(messages, TOOL_SPECS)
 
         if tool_calls:
             for call in tool_calls:
                 print(f"  -> tool: {call.name}  args: {call.arguments}")
         else:
-            print(f"  (no native tool call) model said: {content!r}")
+            print(f"  (no tool call) model said: {content!r}")
 
 
 if __name__ == "__main__":
