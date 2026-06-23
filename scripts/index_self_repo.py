@@ -4,6 +4,16 @@ from omegaconf import OmegaConf
 
 from cse.search_engine.engine import CodeSearchEngine
 
+# Code, config and docs worth making searchable about this repo
+SELF_REPO_GLOBS = [
+    "**/*.py",
+    "**/*.md",
+    "**/*.yaml",
+    "**/*.yml",
+    "**/*.toml",
+    "**/Makefile",
+]
+
 
 def main():
     # Parse arguments and config file
@@ -43,12 +53,12 @@ def main():
         db_recreate=True,
     )
 
-    print("\n--- Indexing Repository Source (.py files) ---")
+    print("\n--- Indexing Repository Source (code, config, docs) ---")
     engine.index_from_directory(
         args.repo_dir,
         chunk_size=config.splitter.chunk_size,
         chunk_overlap=config.splitter.chunk_overlap,
-        glob="**/*.py",
+        glob=SELF_REPO_GLOBS,
     )
 
 
