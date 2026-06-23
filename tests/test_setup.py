@@ -53,13 +53,13 @@ def test_build_agent_uses_finetuned_model_when_requested():
     assert "finetuned-model" in steps[0].content
 
 
-def test_build_agent_uses_full_collection_for_baseline():
+def test_build_agent_uses_self_repo_collection_for_baseline():
     import cse.agent.setup as setup_module
 
     list(build_agent(AgentOptions(agent_type="baseline")))
 
     kwargs = setup_module.CodeSearchEngine.call_args.kwargs
-    assert kwargs["db_collection"] == "cosqa_full"
+    assert kwargs["db_collection"] == "self_repo"
 
 
 def test_build_agent_uses_self_repo_collection_for_tool_loop():

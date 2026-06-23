@@ -57,13 +57,9 @@ def build_agent(
             else config.model_name
         )
 
-        # The tool-loop agent explores this repo's own source via read_file/list_directory/grep,
-        # so it must search the self-indexed collection rather than the CoSQA corpus
-        db_collection = (
-            config.qdrant.self_repo_collection
-            if options.agent_type == "tool-loop"
-            else config.qdrant.full_collection
-        )
+        # Both agents answer questions about this repo, so both search self_repo
+        # CoSQA stays reserved for embedding fine-tuning and retrieval eval
+        db_collection = config.qdrant.self_repo_collection
 
         yield SetupStep(
             "status",

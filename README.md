@@ -113,36 +113,6 @@ streamlit run apps/streamlit_app.py
 
 This project also focuses on fine-tuning a pre-trained sentence transformer model (MiniLM-L6-v2) using the CoSQA (Code Search and Question Answering) dataset. The goal is to enhance the model's ability to semantically map natural language queries to relevant code snippets, outperforming the base model in retrieval metrics like MRR, nDCG and Recall. The retrieval engine is built using Qdrant for efficient vector indexing and search.
 
-
-### Local Code Search Demo
-
-The `demo.py` script contains an initial demonstration of the search engine. The script creates a search engine with the `all-MiniLM-L6-v2` pre-trained embedding and indexes the documents in `sample_code` in a Qdrant vector database. The search engine is then given some sample queries. 
-
-An example output for the query "a python function for sorting a list" is shown below. The results show the similarity score, the source file of the code and the code snippet.
-```
->>> python scripts/demo.py
-
-Searching for: 'a python function for sorting a list'
-  Result 1 (Score: 0.6937)
-  Source: sample_code/utils.py
-  ------------------------------
-  def sort_list_ascending(my_list):
-      """Sorts a given list in ascending order."""
-      return sorted(my_list)
-  
-  def calculate_average(numbers):...
-  ==============================
-  Result 2 (Score: 0.1522)
-  Source: sample_code/user.py
-  ------------------------------
-  class User:
-      """
-      A simple class to represent a user in the system.
-      """
-      def __init__(self, username, email):...
-  ==============================
-```
-
 ### Fine-tuning Model on CoSQA
 
 The `fine_tune.py` script fine-tunes the sentence transformer model used in the demo on code snippets of the training split of the [CoSQA dataset](https://huggingface.co/datasets/gonglinyuan/CoSQA):
