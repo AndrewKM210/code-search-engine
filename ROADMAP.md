@@ -62,7 +62,7 @@ tool to call, and can take multiple steps (search, then read a file, then search
 Measure whether the agentic loop actually beats the one-shot baseline, instead of assuming it.
 
 - [x] Write a gold set of ~15–30 Q&A pairs about this repo
-- [ ] Implement an LLM-as-judge scorer (correctness + faithfulness)
+- [x] Implement an LLM-as-judge scorer (correctness + faithfulness)
 - [ ] Build an eval harness that runs both agents (baseline vs. tool loop) over the gold set
 - [ ] Run the eval and record task-success numbers for both agents
 - [ ] Document the before/after comparison
