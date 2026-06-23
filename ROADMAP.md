@@ -10,7 +10,7 @@ one-shot baseline rather than assumed to be better.
 | Milestone | Status |
 |---|---|
 | [M0 — Harden the base](#m0--harden-the-base) | ✅ Done |
-| [M1 — Agentic loop + tools](#m1--agentic-loop--tools) | 🚧 In progress |
+| [M1 — Agentic loop + tools](#m1--agentic-loop--tools) | ✅ Done |
 | [M2 — Generation eval (LLM-as-judge)](#m2--generation-eval-llm-as-judge) | ⬜ Planned |
 | [M3 — MCP server](#m3--mcp-server) | ⬜ Planned |
 | [M4 — LLM benchmark (local + API)](#m4--llm-benchmark-local--api) | ⬜ Planned |
@@ -38,7 +38,7 @@ later milestone reuses this embedding model.
 
 ---
 
-## M1 — Agentic loop + tools
+## M1 — Agentic loop + tools ✅ Done
 
 Replace the fixed plan→search→critique pipeline with a loop where the LLM chooses which
 tool to call, and can take multiple steps (search, then read a file, then search again).

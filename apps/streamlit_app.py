@@ -1,35 +1,28 @@
 from argparse import ArgumentParser
 
 import streamlit as st
-from omegaconf import OmegaConf
 
-from cse.agent.core import CodingAgent
-from cse.agent.llm import LLMClient
-from cse.search_engine.engine import CodeSearchEngine
+from cse.agent.presenter import describe_step
+from cse.agent.setup import AgentOptions, build_agent
 
 
-@st.cache_resource
-def initialize_system():
-    """Lazy loads the heavy AI models only once."""
-    print("Initializing System...")
-    try:
-        engine = CodeSearchEngine(
-            model_name=config.finetuned_model_path,
-            db_collection=config.qdrant.full_collection,
-            db_path=config.qdrant.storage_path,
-        )
-        llm = LLMClient(model_name="phi3")
-        return CodingAgent(engine, llm)
-    except Exception as e:
-        st.error(f"System failed to load: {e}")
-        return None
+@st.cache_resource(show_spinner="Loading agent...")
+def get_agent(options: AgentOptions):
+    """Builds (and caches) the agent for a given combination of options."""
+    for step in build_agent(options):
+        if step.step_type == "ready":
+            return step.agent
+        elif step.step_type == "error":
+            st.error(f"System failed to load: {step.content}")
+            return None
+    return None
 
 
-# Parse arguments and config file
+# Parse arguments (paths only; model/agent type are chosen via the sidebar)
 parser = ArgumentParser()
 parser.add_argument("--config", type=str, default="config/main_config.yaml")
+parser.add_argument("--llm-config", type=str, default="config/llm_config.yaml")
 args = parser.parse_args()
-config = OmegaConf.load(args.config)
 
 # Set page configuration
 st.set_page_config(
@@ -54,17 +47,41 @@ st.markdown(
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Initialize the AI Agent
-agent = initialize_system()
-
 # Configure sidebar
 with st.sidebar:
     st.title("AI Code Assistant")
     st.markdown("---")
+
+    st.markdown("### Agent Settings")
+    agent_type = st.selectbox(
+        "Agent",
+        ["baseline", "tool-loop"],
+        help=(
+            "baseline: fixed plan->search->critique pipeline. "
+            "tool-loop: LLM chooses tools (search/read/list/grep) in a loop."
+        ),
+    )
+    model = st.text_input("Ollama model", value="phi3")
+    finetuned = st.checkbox(
+        "Use fine-tuned embedding model",
+        value=False,
+        help="Search using the fine-tuned model, otherwise uses the base model.",
+    )
+
+    options = AgentOptions(
+        finetuned=finetuned,
+        agent_type=agent_type,
+        model=model,
+        config_path=args.config,
+        llm_config_path=args.llm_config,
+    )
+    agent = get_agent(options)
+
+    st.markdown("---")
     st.markdown("### System Status")
     if agent:
         st.success("Agent Online")
-        st.info("Backend: Qdrant + Phi-3 (Ollama)")
+        st.info(f"Backend: Qdrant + {model} (Ollama)")
     else:
         st.error("Agent Offline")
 
@@ -113,18 +130,14 @@ if prompt := st.chat_input("How do I sort a list in Python?"):
         # Run the agent stream
         try:
             for step in agent.solve(prompt):
-                # Update the thought container
-                if step.step_type == "plan":
-                    thought_container.write(f"**Plan:** {step.content}")
+                label, text = describe_step(step)
 
-                elif step.step_type == "search":
-                    thought_container.write(f"**Search:** {step.content}")
+                if step.step_type == "search":
+                    thought_container.write(f"**{label}:** {text}")
                     if step.data:
-                        # Capture data for later display but don't clutter the thought stream too much
                         thought_container.markdown(
                             f"*Found {len(step.data)} candidates*"
                         )
-
                         # Format for saving later
                         for res in step.data:
                             src = res["payload"].get("source", "Unknown")
@@ -136,8 +149,8 @@ if prompt := st.chat_input("How do I sort a list in Python?"):
                             )
 
                 elif step.step_type == "critique":
-                    thought_container.write(f"**Critique:** {step.content}")
-                    if "Refining" in step.content:
+                    thought_container.write(f"**{label}:** {text}")
+                    if "Refining" in text:
                         thought_container.update(
                             label="Refining Search...", state="running"
                         )
@@ -148,11 +161,14 @@ if prompt := st.chat_input("How do I sort a list in Python?"):
                         state="complete",
                         expanded=False,
                     )
-                    final_answer = step.content
+                    final_answer = text
 
                 elif step.step_type == "error":
                     thought_container.update(label="Error", state="error")
-                    st.error(step.content)
+                    st.error(text)
+
+                else:  # start, plan, tool_call, tool_result
+                    thought_container.write(f"**{label}:** {text}")
 
             # Render final answer
             response_placeholder.markdown(final_answer)

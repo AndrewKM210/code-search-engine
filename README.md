@@ -46,14 +46,18 @@ The primary challenge in code Q&A is retrieving semantically relevant, high-qual
 
 ### Architecture and Agentic Loop
 
-The system operates based on a clear separation of concerns, managed by the central **`Agent`** class:
+Two agents share the same `CodeSearchEngine`/`LLMClient` and are both measured against
+each other rather than one being assumed better (see [ROADMAP.md](ROADMAP.md)):
 
-1.  **Plan:** The LLM receives the user query and generates an optimized search string for the vector database.
-2.  **Retrieve:** The `CodeSearchEngine` queries Qdrant to retrieve top-k code snippets.
-3.  **Critique:** The LLM receives the original query and the retrieved context. It determines if the context is sufficient to form a definitive answer.
-4.  **Execute/Retry:**
-    * **If Sufficient:** The LLM synthesizes the final, explained answer.
-    * **If Insufficient:** The LLM generates a new, refined search query, and the process repeats (up to a defined limit).
+* **`CodingAgent` (baseline):** a fixed plan -> retrieve -> critique -> retry pipeline.
+    1.  **Plan:** The LLM receives the user query and generates an optimized search string.
+    2.  **Retrieve:** The `CodeSearchEngine` queries Qdrant to retrieve top-k code snippets.
+    3.  **Critique:** The LLM checks whether the retrieved context is sufficient.
+    4.  **Execute/Retry:** If sufficient, it synthesizes the final answer; if not, it
+        refines the search query and repeats (up to a defined limit).
+* **`ToolCallingAgent` (tool loop):** the LLM chooses which tool to call at each step
+  (`search_code`, `read_file`, `list_directory`, `grep`) and can take multiple steps -
+  e.g. search, then read a file, then search again - before answering.
 
 
 ## Getting Started
@@ -87,14 +91,18 @@ pip install -e ".[dev]"
 
 ### Initial Setup (Indexing the Data and Fine-Tuning the SBERT model)
 
-Before running the agent, you must index the code dataset into Qdrant.
+Before running the agent, you must index the code into Qdrant.
 
 1.  **Configure:** Check and edit configuration in `config/main_config.yaml`.
-2. **Index the CoSQA Dataset:**
+2.  **Index the CoSQA Dataset** (used for embedding fine-tuning and retrieval eval):
     ```bash
-      python scripts/index_cosqa_full.py
+    python scripts/index_cosqa_full.py
     ```
-2.  **Execute Indexing Script:**
+3.  **Index this repo** (used by the agent to answer questions about its own code):
+    ```bash
+    python scripts/index_self_repo.py
+    ```
+4.  **Fine-tune the Embedding Model:**
     ```bash
     python scripts/fine_tune.py
     ```
@@ -103,45 +111,27 @@ Before running the agent, you must index the code dataset into Qdrant.
 
 ### Running the Agent UI
 
-Launch the Streamlit frontend to interact with the self-correcting agent:
+Launch the Streamlit frontend to interact with the agent:
 
 ```bash
 streamlit run apps/streamlit_app.py
 ```
 
+### Running the Agent CLI
+
+```bash
+python apps/cli.py --agent tool-loop --model phi3
+```
+
+* `--agent {baseline,tool-loop}` - baseline: fixed plan->search->critique pipeline.
+  tool-loop: LLM chooses tools (search/read/list/grep) in a loop. Defaults to `baseline`.
+* `--model MODEL` - Ollama model used for reasoning. Defaults to `phi3`.
+* `--finetuned` - search using the fine-tuned embedding model instead of the base model.
+* `--llm-config LLM_CONFIG` - per-model tool-calling capabilities, used by `--agent tool-loop`.
+
 # Additional
 
 This project also focuses on fine-tuning a pre-trained sentence transformer model (MiniLM-L6-v2) using the CoSQA (Code Search and Question Answering) dataset. The goal is to enhance the model's ability to semantically map natural language queries to relevant code snippets, outperforming the base model in retrieval metrics like MRR, nDCG and Recall. The retrieval engine is built using Qdrant for efficient vector indexing and search.
-
-
-### Local Code Search Demo
-
-The `demo.py` script contains an initial demonstration of the search engine. The script creates a search engine with the `all-MiniLM-L6-v2` pre-trained embedding and indexes the documents in `sample_code` in a Qdrant vector database. The search engine is then given some sample queries. 
-
-An example output for the query "a python function for sorting a list" is shown below. The results show the similarity score, the source file of the code and the code snippet.
-```
->>> python scripts/demo.py
-
-Searching for: 'a python function for sorting a list'
-  Result 1 (Score: 0.6937)
-  Source: sample_code/utils.py
-  ------------------------------
-  def sort_list_ascending(my_list):
-      """Sorts a given list in ascending order."""
-      return sorted(my_list)
-  
-  def calculate_average(numbers):...
-  ==============================
-  Result 2 (Score: 0.1522)
-  Source: sample_code/user.py
-  ------------------------------
-  class User:
-      """
-      A simple class to represent a user in the system.
-      """
-      def __init__(self, username, email):...
-  ==============================
-```
 
 ### Fine-tuning Model on CoSQA
 
@@ -188,7 +178,7 @@ Out of curiosity, the model was also fine-tuned using the same CoSQA dataset but
 
 ```bash
 python scripts/fine_tune.py --fn_names
-python scipts/evaluate_fn_names.py
+python scripts/evaluate_fn_names.py
 ```
 
 The results will be stored in `results/losses_fn_names.csv` and `results/evaluation_fn_names.csv`, and can be plotted as shown in the `report.ipynb` notebook. The following plots show that using only function names leads to a significantly higher training loss and worse evaluation metrics. However, given that the amount of tokens stored in the database is now lower, query time is reduced.
