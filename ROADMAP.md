@@ -11,7 +11,7 @@ one-shot baseline rather than assumed to be better.
 |---|---|
 | [M0 — Harden the base](#m0--harden-the-base) | ✅ Done |
 | [M1 — Agentic loop + tools](#m1--agentic-loop--tools) | ✅ Done |
-| [M2 — Generation eval (LLM-as-judge)](#m2--generation-eval-llm-as-judge) | ⬜ Planned |
+| [M2 — Generation eval (LLM-as-judge)](#m2--generation-eval-llm-as-judge) | 🚧 In progress |
 | [M3 — MCP server](#m3--mcp-server) | ⬜ Planned |
 | [M4 — LLM benchmark (local + API)](#m4--llm-benchmark-local--api) | ⬜ Planned |
 | [M5 — Multi-agent orchestration](#m5--multi-agent-orchestration) | ⬜ Planned (gated on M2 results) |
@@ -57,7 +57,7 @@ tool to call, and can take multiple steps (search, then read a file, then search
 
 ---
 
-## M2 — Generation eval (LLM-as-judge)
+## M2 — Generation eval (LLM-as-judge) 🚧 In progress
 
 Measure whether the agentic loop actually beats the one-shot baseline, instead of assuming it.
 
