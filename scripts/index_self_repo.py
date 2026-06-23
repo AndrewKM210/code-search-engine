@@ -37,6 +37,10 @@ def main():
         db_collection=config.qdrant.self_repo_collection,
         db_path=config.qdrant.storage_path,
         device=config.get("device", "auto"),
+        # Always rebuild from scratch: this script has no incremental/diffing
+        # logic, so a partial upsert would leave stale points around for any
+        # file that was since renamed, moved or deleted
+        db_recreate=True,
     )
 
     print("\n--- Indexing Repository Source (.py files) ---")
