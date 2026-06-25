@@ -147,7 +147,7 @@ Tracking is done with `mlflow` and the log of the loss during training will be s
 mlflow ui
 ```
 
-The loss can be plotted as shown in the `report.ipynb` notebook. An example loss plot of training for one epoch on the whole dataset is shown below. Even though the loss is noisy, the average loss does decrease over time.
+The loss can be plotted as shown in the `notebooks/report.ipynb` notebook. An example loss plot of training for one epoch on the whole dataset is shown below. Even though the loss is noisy, the average loss does decrease over time.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/loss_ft_dark.png">
@@ -160,7 +160,7 @@ The `scripts/evaluate_finetuning.py` script evaluates both the base and finetune
 
 `python scripts/evaluate_finetuning.py`
 
-The resulting metrics are stored in `results/evaluation.csv` and can be plotted for comparison as shown in the `report.ipynb` notebook. The following plot shows how the finetuned model outperforms the base model in all metrics, as well as the improvement gain in terms of percentage:
+The resulting metrics are stored in `results/evaluation.csv` and can be plotted for comparison as shown in the `notebooks/report.ipynb` notebook. The following plot shows how the finetuned model outperforms the base model in all metrics, as well as the improvement gain in terms of percentage:
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/eval_ft_dark.png">
@@ -181,7 +181,7 @@ python scripts/fine_tune.py --fn_names
 python scripts/evaluate_fn_names.py
 ```
 
-The results will be stored in `results/losses_fn_names.csv` and `results/evaluation_fn_names.csv`, and can be plotted as shown in the `report.ipynb` notebook. The following plots show that using only function names leads to a significantly higher training loss and worse evaluation metrics. However, given that the amount of tokens stored in the database is now lower, query time is reduced.
+The results will be stored in `results/losses_fn_names.csv` and `results/evaluation_fn_names.csv`, and can be plotted as shown in the `notebooks/report.ipynb` notebook. The following plots show that using only function names leads to a significantly higher training loss and worse evaluation metrics. However, given that the amount of tokens stored in the database is now lower, query time is reduced.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/loss_fn_dark.png">
