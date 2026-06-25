@@ -63,7 +63,7 @@ Measure whether the agentic loop actually beats the one-shot baseline, instead o
 
 - [x] Write a gold set of ~15–30 Q&A pairs about this repo
 - [x] Implement an LLM-as-judge scorer (correctness + faithfulness)
-- [ ] Build an eval harness that runs both agents (baseline vs. tool loop) over the gold set
+- [x] Build an eval harness that runs both agents (baseline vs. tool loop) over the gold set
 - [ ] Run the eval and record task-success numbers for both agents
 - [ ] Document the before/after comparison
 

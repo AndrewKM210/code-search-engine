@@ -1,0 +1,31 @@
+# Benchmark configuration — used by scripts/run_benchmark.py
+
+# Max tool-call steps per question for ToolCallingAgent runs
+max_steps: 5
+
+# Model used as LLM-as-judge scorer
+judge_model: "qwen2.5:7b-instruct"
+
+# Cap gold set to N questions per category (null = full gold set)
+limit: null
+
+# Ordered list of agent configurations to benchmark.
+# agent: "baseline" uses CodingAgent; "tool-loop" uses ToolCallingAgent.
+# nudges: toggles rejection guardrails + per-turn ANSWER_IF_SUFFICIENT reminder
+#         (only applies to tool-loop; ignored for baseline)
+runs:
+  - name: "phi3-baseline"
+    model: "phi3"
+    agent: "baseline"
+  - name: "qwen2.5-coder:3b-tool-loop"
+    model: "qwen2.5-coder:3b"
+    agent: "tool-loop"
+    nudges: true
+  - name: "llama3.2:3b-tool-loop"
+    model: "llama3.2:3b"
+    agent: "tool-loop"
+    nudges: false
+  - name: "llama3.2:3b-tool-loop-nudged"
+    model: "llama3.2:3b"
+    agent: "tool-loop"
+    nudges: true
