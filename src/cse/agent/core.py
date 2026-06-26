@@ -1,5 +1,8 @@
+import json
+import re
 from collections.abc import Callable, Generator
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from cse.agent.llm import LLMClient
@@ -13,13 +16,160 @@ from cse.agent.tools import (
 )
 from cse.search_engine.engine import CodeSearchEngine
 
+# Matches the "(source: <path>, score: ...)" tag search_code puts on each result
+_SOURCE_TAG_RE = re.compile(r"\(source:\s*([^,]+),\s*score:")
+
 TOOL_LOOP_SYSTEM_MSG = (
     "You are a coding assistant exploring a repository. Use the available "
     "tools (search_code, read_file, list_directory, grep) to find the "
     "information needed to answer the user's question. Once you have "
-    "enough information, answer the question directly in plain text "
-    "instead of calling another tool."
+    "enough information, answer in plain English (never JSON), citing the "
+    "specific file path the information came from."
 )
+
+# Nudge used when the model tries to answer before ever calling a tool,
+# since small local models often skip retrieval and guess from prior knowledge
+NO_TOOL_USED_YET_MSG = (
+    "Answer the question using one of the available tools (search_code, "
+    "read_file, list_directory, grep) first, instead of answering directly."
+)
+
+# Nudge used when the model's "answer" is a bare JSON object instead of prose
+RAW_JSON_ANSWER_MSG = (
+    "Don't respond with a JSON object. Answer in one or two plain English "
+    "sentences, citing the file path the information came from."
+)
+
+# Nudge used when the model's answer never names any file it actually looked at
+MISSING_CITATION_MSG = (
+    "Rewrite your answer, explicitly naming the file path you found this "
+    "information in."
+)
+
+# Nudge used when the model narrates "calling a tool" in prose instead of
+# actually issuing one (it tends to echo this loop's own "Calling tool
+# name(...)" conversation history back as if it were a real action)
+FAKE_TOOL_NARRATION_MSG = (
+    "Don't describe calling a tool in your response. Either actually use a "
+    "tool, or answer the question directly in plain English with a citation."
+)
+
+# Re-stated after every tool result, since small local models tend to lose
+# track of the system-level "stop and answer" instruction after a few turns
+ANSWER_IF_SUFFICIENT_MSG = (
+    "If this answers the question, respond now in plain English citing the "
+    "file it came from. Otherwise, call another tool."
+)
+
+
+def _looks_like_raw_tool_call(content: str) -> bool:
+    """
+    Detects a JSON tool-call object masquerading as the final answer.
+
+    Args:
+        content (str): The model's would-be final answer.
+
+    Returns:
+        bool: True if content is just a JSON object shaped like a tool
+            call, e.g. {"name": ..., "parameters": {...}}.
+    """
+    text = content.strip()
+    if not text.startswith("{"):
+        return False
+    try:
+        parsed = json.loads(text)
+    except (json.JSONDecodeError, ValueError):
+        return False
+    return isinstance(parsed, dict) and "name" in parsed
+
+
+def _extract_sources(tool_result: str) -> set[str]:
+    """
+    Pulls the file paths search_code tagged its results with out of its output.
+
+    Args:
+        tool_result (str): Output of the search_code tool.
+
+    Returns:
+        set[str]: Source file paths tagged in the result, if any.
+    """
+    return set(_SOURCE_TAG_RE.findall(tool_result))
+
+
+def _narrates_a_tool_call(content: str) -> bool:
+    """
+    Detects the model describing a tool call in prose instead of issuing one.
+
+    Args:
+        content (str): The model's would-be final answer.
+
+    Returns:
+        bool: True if content echoes the "Calling tool name(...)" phrasing
+            this loop's own conversation history uses, instead of actually
+            using the tool-call mechanism.
+    """
+    return "calling tool" in content.lower()
+
+
+def _mentions_any_source(content: str, seen_sources: set[str]) -> bool:
+    """
+    Checks whether an answer cites at least one file it was grounded in.
+
+    Args:
+        content (str): The model's would-be final answer.
+        seen_sources (set[str]): File paths the agent actually looked at
+            this run (from search_code results, or read_file/grep/
+            list_directory paths).
+
+    Returns:
+        bool: True if content mentions a full path or basename from
+            seen_sources, or if seen_sources is empty (nothing to cite).
+    """
+    if not seen_sources:
+        return True
+    return any(
+        source in content or Path(source).name in content
+        for source in seen_sources
+    )
+
+
+def _reject_answer(
+    content: str, has_called_tool: bool, seen_sources: set[str]
+) -> tuple[str, str] | None:
+    """
+    Decides whether a would-be final answer should be rejected and retried.
+
+    Args:
+        content (str): The model's would-be final answer.
+        has_called_tool (bool): Whether any tool has been called this run.
+        seen_sources (set[str]): File paths looked at so far this run.
+
+    Returns:
+        tuple[str, str] | None: (status message, corrective nudge) if the
+            answer should be rejected, or None if it's acceptable as-is.
+    """
+    if not has_called_tool:
+        return (
+            "Model answered without using a tool, asking it to search first...",
+            NO_TOOL_USED_YET_MSG,
+        )
+    if _looks_like_raw_tool_call(content):
+        return (
+            "Model answered with a raw JSON object, asking it to use plain English...",
+            RAW_JSON_ANSWER_MSG,
+        )
+    if _narrates_a_tool_call(content):
+        return (
+            "Model narrated a tool call instead of using one, asking it to "
+            "actually call it or answer directly...",
+            FAKE_TOOL_NARRATION_MSG,
+        )
+    if not _mentions_any_source(content, seen_sources):
+        return (
+            "Model's answer didn't cite a source file, asking it to add one...",
+            MISSING_CITATION_MSG,
+        )
+    return None
 
 
 @dataclass
@@ -123,10 +273,12 @@ class ToolCallingAgent:
         llm_config,
         base_dir: str = ".",
         max_steps: int = 6,
+        use_nudges: bool = True,
     ):
         self.llm = llm
         self.llm_config = llm_config
         self.max_steps = max_steps
+        self.use_nudges = use_nudges
         self.tools: dict[str, Callable[..., str]] = {
             "search_code": lambda query: search_code(query, engine),
             "read_file": lambda path: read_file(path, base_dir),
@@ -149,6 +301,8 @@ class ToolCallingAgent:
             ("system", TOOL_LOOP_SYSTEM_MSG),
             ("user", user_query),
         ]
+        has_called_tool = False
+        seen_sources: set[str] = set()
 
         for _ in range(self.max_steps):
             yield AgentStep("plan", "Deciding next action...")
@@ -157,6 +311,17 @@ class ToolCallingAgent:
             )
 
             if not tool_calls:
+                if self.use_nudges:
+                    rejection = _reject_answer(
+                        content, has_called_tool, seen_sources
+                    )
+                    if rejection is not None:
+                        status, nudge = rejection
+                        yield AgentStep("plan", status)
+                        conversation.append(("assistant", content))
+                        conversation.append(("user", nudge))
+                        continue
+
                 yield AgentStep("answer", content)
                 return
 
@@ -167,12 +332,25 @@ class ToolCallingAgent:
                 result = self._run_tool(call)
                 yield AgentStep("tool_result", result)
 
+                # Only a successful result counts as having "used a tool":
+                # a failed call hasn't actually grounded anything yet
+                if not result.startswith("Error:"):
+                    has_called_tool = True
+                    seen_sources |= _extract_sources(result)
+                    path = call.arguments.get("path")
+                    if (
+                        call.name in ("read_file", "grep", "list_directory")
+                        and path
+                    ):
+                        seen_sources.add(path)
+
                 conversation.append(
                     ("assistant", f"Calling tool {call.name}({call.arguments})")
                 )
-                conversation.append(
-                    ("user", f"Result of {call.name}:\n{result}")
-                )
+                result_msg = f"Result of {call.name}:\n{result}"
+                if self.use_nudges:
+                    result_msg += f"\n\n{ANSWER_IF_SUFFICIENT_MSG}"
+                conversation.append(("user", result_msg))
 
         yield AgentStep(
             "error", "Could not produce an answer within the step limit."

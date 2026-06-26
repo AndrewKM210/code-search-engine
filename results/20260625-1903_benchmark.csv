@@ -1,0 +1,5 @@
+timestamp,run,model,agent,nudges,n_questions,correctness_pct,faithfulness_pct
+20260625-1903,phi3-baseline,phi3,baseline,,24,83.3,29.2
+20260625-1903,qwen2.5-coder:3b-tool-loop,qwen2.5-coder:3b,tool-loop,true,24,12.5,4.2
+20260625-1903,llama3.2:3b-tool-loop,llama3.2:3b,tool-loop,false,24,8.3,0.0
+20260625-1903,llama3.2:3b-tool-loop-nudged,llama3.2:3b,tool-loop,true,24,33.3,20.8

@@ -3,10 +3,15 @@ default_model: "phi3"
 
 # Per-model capabilities, looked up by exact Ollama model name
 # Models not listed here default to native_tool_calling: false (the JSON fallback path)
+# tool_calling_trained: whether the model was instruction-tuned for tool/function calling
+# native_tool_calling: whether Ollama exposes native bind_tools support for it
 models:
   "llama3.2:3b":
+    tool_calling_trained: true
     native_tool_calling: true
   "qwen2.5-coder:3b":
+    tool_calling_trained: true
     native_tool_calling: false
   "phi3":
+    tool_calling_trained: false
     native_tool_calling: false

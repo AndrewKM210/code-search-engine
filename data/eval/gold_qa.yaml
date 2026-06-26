@@ -1,0 +1,288 @@
+# Gold Q&A set for M2 generation eval (LLM-as-judge)
+#
+# category:
+#   lookup     - single exact fact, answerable from one file/grep hit
+#   multi_hop  - requires connecting two or more files/components
+#   conceptual - architectural "why"/"what", answerable from docs or a broad read
+#
+# evidence lists the files a faithful answer should be grounded in.
+
+- id: 1
+  category: lookup
+  question: >-
+    What glob pattern does scripts/index_self_repo.py use when indexing this
+    repository's own source code?
+  reference_answer: "**/*.py"
+  evidence:
+    - scripts/index_self_repo.py
+
+- id: 2
+  category: lookup
+  question: >-
+    What are the default chunk_size and chunk_overlap used when splitting
+    documents before indexing?
+  reference_answer: chunk_size 1000, chunk_overlap 100.
+  evidence:
+    - config/main_config.yaml
+
+- id: 3
+  category: lookup
+  question: >-
+    What distance metric does the Qdrant collection use for vector similarity?
+  reference_answer: Cosine distance (models.Distance.COSINE).
+  evidence:
+    - src/cse/search_engine/engine.py
+
+- id: 4
+  category: lookup
+  question: >-
+    How many characters of a file's contents will the read_file tool return
+    before truncating it?
+  reference_answer: "10,000 characters (MAX_FILE_CHARS), after which it appends '... [truncated]'."
+  evidence:
+    - src/cse/agent/tools.py
+
+- id: 5
+  category: lookup
+  question: >-
+    Which Ollama model is configured with native_tool_calling set to true in
+    config/llm_config.yaml?
+  reference_answer: "llama3.2:3b"
+  evidence:
+    - config/llm_config.yaml
+
+- id: 6
+  category: lookup
+  question: What Python version does pyproject.toml pin via requires-python?
+  reference_answer: "==3.10.18"
+  evidence:
+    - pyproject.toml
+
+- id: 7
+  category: lookup
+  question: What line length does ruff enforce in this project?
+  reference_answer: "80 characters."
+  evidence:
+    - pyproject.toml
+
+- id: 8
+  category: lookup
+  question: >-
+    What does the read_file tool return if asked to read a path that resolves
+    outside the repository root?
+  reference_answer: >-
+    An error string: "Error: '<path>' is outside the allowed directory."; it
+    does not read the file.
+  evidence:
+    - src/cse/agent/tools.py
+
+- id: 9
+  category: multi_hop
+  question: >-
+    When the CLI is run with --agent tool-loop, which class ends up handling
+    the user's query, and where is that choice made?
+  reference_answer: >-
+    ToolCallingAgent. The choice is made in build_agent() in
+    src/cse/agent/setup.py, which branches on options.agent_type (set from the
+    CLI's --agent flag in apps/cli.py) and constructs ToolCallingAgent instead
+    of CodingAgent.
+  evidence:
+    - apps/cli.py
+    - src/cse/agent/setup.py
+    - src/cse/agent/core.py
+
+- id: 10
+  category: multi_hop
+  question: >-
+    Both indexing and agent setup support a --finetuned flag. In each case,
+    which embedding model gets selected when the flag is passed, and where is
+    that decision made?
+  reference_answer: >-
+    config.finetuned_model_path is used when --finetuned is passed, otherwise
+    config.model_name. This is decided independently in scripts/index_self_repo.py
+    (for indexing) and in build_agent() in src/cse/agent/setup.py (for the
+    agent's search engine).
+  evidence:
+    - scripts/index_self_repo.py
+    - src/cse/agent/setup.py
+
+- id: 11
+  category: multi_hop
+  question: >-
+    Which Qdrant collection do both CodingAgent and ToolCallingAgent search
+    when answering questions about this repo, and why is it kept separate
+    from the CoSQA collections?
+  reference_answer: >-
+    Both search config.qdrant.self_repo_collection ("self_repo"). The CoSQA
+    collections (cosqa_full/cosqa_base/cosqa_finetuned) are reserved for
+    embedding fine-tuning and retrieval evaluation, not for answering
+    questions about this codebase.
+  evidence:
+    - src/cse/agent/setup.py
+    - config/main_config.yaml
+
+- id: 12
+  category: multi_hop
+  question: >-
+    What happens inside CodingAgent.solve when engine.search returns no
+    results for a generated query?
+  reference_answer: >-
+    It yields a "search" step saying no results were found, increments the
+    retry counter, and loops back to generate a new search query (up to
+    max_retries = 2 attempts) before eventually yielding an "error" step if
+    nothing is found.
+  evidence:
+    - src/cse/agent/core.py
+
+- id: 13
+  category: multi_hop
+  question: >-
+    What data structure do CodingAgent and ToolCallingAgent both use to
+    report progress, and what component turns it into CLI output?
+  reference_answer: >-
+    Both yield AgentStep (step_type, content, data) from src/cse/agent/core.py;
+    describe_step() in src/cse/agent/presenter.py converts each AgentStep into
+    a (label, text) pair that apps/cli.py and apps/streamlit_app.py print/render.
+  evidence:
+    - src/cse/agent/core.py
+    - src/cse/agent/presenter.py
+    - apps/cli.py
+
+- id: 14
+  category: multi_hop
+  question: >-
+    Regardless of whether an LLM uses native tool-calling or the prompt+JSON
+    fallback, what common structure are its tool requests parsed into before
+    ToolCallingAgent dispatches them?
+  reference_answer: >-
+    A ToolCall pydantic model (name: str, arguments: dict) defined in
+    src/cse/agent/schema.py, produced by LLMClient.call_with_tools_auto and
+    consumed by ToolCallingAgent._run_tool.
+  evidence:
+    - src/cse/agent/schema.py
+    - src/cse/agent/llm.py
+    - src/cse/agent/core.py
+
+- id: 15
+  category: multi_hop
+  question: >-
+    What ties apps/cli.py and apps/streamlit_app.py together so they don't
+    duplicate agent setup logic?
+  reference_answer: >-
+    Both call build_agent() with an AgentOptions instance, both defined in
+    src/cse/agent/setup.py, which centralizes loading config, constructing the
+    CodeSearchEngine/LLMClient, and choosing the agent class.
+  evidence:
+    - src/cse/agent/setup.py
+    - apps/cli.py
+    - apps/streamlit_app.py
+
+- id: 16
+  category: multi_hop
+  question: >-
+    If the tool-loop agent calls grep on a pattern, which underlying tool
+    function runs it, and what caps does it place on the output returned to
+    the LLM?
+  reference_answer: >-
+    grep() in src/cse/agent/tools.py runs it, scoped to base_dir via
+    _resolve_within; it caps results at MAX_GREP_MATCHES (100) matches and
+    MAX_GREP_LINE_CHARS (200) characters per matched line.
+  evidence:
+    - src/cse/agent/tools.py
+
+- id: 17
+  category: conceptual
+  question: What is the overall goal of this project, per ROADMAP.md?
+  reference_answer: >-
+    It started as a RAG-based code search engine (Qdrant + fine-tuned sentence
+    embeddings) and is growing into an agentic coding assistant: an LLM that
+    chooses tools (search, read, grep) to answer questions about a codebase,
+    measured against a one-shot baseline rather than assumed to be better.
+  evidence:
+    - ROADMAP.md
+
+- id: 18
+  category: conceptual
+  question: >-
+    What are the two agent strategies implemented for answering questions
+    about a repo, and what's the core difference between them?
+  reference_answer: >-
+    CodingAgent runs a fixed plan->search->critique pipeline using only
+    search_code, retrying with a reformulated query on failure. ToolCallingAgent
+    lets the LLM freely choose among search_code, read_file, list_directory and
+    grep across multiple steps until it decides it can answer.
+  evidence:
+    - src/cse/agent/core.py
+    - ROADMAP.md
+
+- id: 19
+  category: conceptual
+  question: >-
+    Why does this project fine-tune the embedding model instead of just using
+    the base sentence-transformer?
+  reference_answer: >-
+    M0 established that fine-tuned embeddings beat the base model on CoSQA
+    validation (MRR 0.854->0.893, nDCG 0.886->0.918, Recall 0.981->0.990), and
+    that result is carried forward as the retriever used by every later
+    milestone.
+  evidence:
+    - ROADMAP.md
+
+- id: 20
+  category: conceptual
+  question: What is the goal of Milestone M2 in ROADMAP.md?
+  reference_answer: >-
+    To measure whether the agentic tool-loop actually beats the one-shot
+    baseline agent, instead of assuming it does, by building a gold Q&A set,
+    an LLM-as-judge scorer, and an eval harness that runs both agents over
+    that set and records/documents task-success numbers.
+  evidence:
+    - ROADMAP.md
+
+- id: 21
+  category: conceptual
+  question: >-
+    Why was the M1 agent loop rewritten from a fixed search-only pipeline into
+    a tool-choosing loop?
+  reference_answer: >-
+    So the LLM itself decides which tool to call and can take multiple steps
+    (e.g. search, then read a file, then search again) instead of being
+    restricted to one fixed search action per attempt, mirroring how real
+    coding agents navigate a codebase.
+  evidence:
+    - ROADMAP.md
+    - PROJECT.md
+
+- id: 22
+  category: conceptual
+  question: >-
+    According to PROJECT.md's guiding principles, what does "measurement over
+    vibes" mean for whether a feature like a second agent (M5) gets added?
+  reference_answer: >-
+    A component should only be added if it demonstrably improves a measured
+    metric (e.g. task success on the eval set) — not added because it sounds
+    impressive; every change should have a documented baseline-vs-after
+    comparison.
+  evidence:
+    - PROJECT.md
+    - ROADMAP.md
+
+- id: 23
+  category: conceptual
+  question: What device priority does resolve_device() use when device is "auto"?
+  reference_answer: "CUDA, then Apple MPS, then CPU."
+  evidence:
+    - src/cse/search_engine/engine.py
+
+- id: 24
+  category: conceptual
+  question: >-
+    Why is the CoSQA dataset still used in this project even though the agent
+    answers questions about this repo's own source, not CoSQA?
+  reference_answer: >-
+    CoSQA is kept solely for fine-tuning and evaluating the embedding model
+    (retrieval metrics like MRR/nDCG/recall); the agent itself searches the
+    self_repo collection indexed from this repository's own source.
+  evidence:
+    - ROADMAP.md
+    - src/cse/agent/setup.py

@@ -2,7 +2,9 @@ __pycache__/
 qdrant*/
 *model*/
 mlruns/
-data/
 *.egg-info
 .vscode
 .pytest_cache
+
+# Notebooks are local scratch — use plots/*.py as the versioned source
+*.ipynb

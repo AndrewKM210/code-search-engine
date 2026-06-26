@@ -129,7 +129,7 @@ class CodeSearchEngine:
         dir_path: str,
         chunk_size: int = 1000,
         chunk_overlap: int = 100,
-        glob: str = "**/*.*",
+        glob: str | list[str] = "**/*.*",
     ):
         """
         Loads, splits, and indexes all documents from a specified directory.
@@ -138,21 +138,26 @@ class CodeSearchEngine:
             dir_path (str): Path to directory with documents.
             chunk_size (int): Size of indexed text chunks.
             chunk_overlap (int): Overlap in characters between chunks.
-            glob (str): Glob pattern selecting which files under dir_path to load.
+            glob (str | list[str]): Glob pattern(s) selecting which files
+                under dir_path to load. Patterns are loaded and embedded
+                together in one pass, so point IDs stay collision-free.
         """
         if not self.quiet:
             print(f"Indexing documents from directory: {dir_path}")
 
-        # Load documents
-        loader = DirectoryLoader(
-            dir_path,
-            glob=glob,
-            loader_cls=TextLoader,
-            show_progress=True,
-            use_multithreading=True,
-            loader_kwargs={"encoding": "utf-8"},
-        )
-        documents = loader.load()
+        # Load documents across one or more glob patterns
+        patterns = [glob] if isinstance(glob, str) else glob
+        documents = []
+        for pattern in patterns:
+            loader = DirectoryLoader(
+                dir_path,
+                glob=pattern,
+                loader_cls=TextLoader,
+                show_progress=True,
+                use_multithreading=True,
+                loader_kwargs={"encoding": "utf-8"},
+            )
+            documents.extend(loader.load())
 
         if not documents:
             print(f"No documents found in {dir_path}.")
