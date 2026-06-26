@@ -5,3 +5,6 @@ mlruns/
 *.egg-info
 .vscode
 .pytest_cache
+
+# Notebooks are local scratch — use plots/*.py as the versioned source
+*.ipynb

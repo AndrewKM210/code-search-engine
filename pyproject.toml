@@ -51,6 +51,9 @@ extend-exclude = ["notebooks/*.ipynb"]
 extend-select = ["I", "B", "UP"]
 ignore = ["E501"]
 
+[tool.ruff.lint.isort]
+known-first-party = ["plot_utils"]
+
 [tool.mypy]
 ignore_missing_imports = true
 strict_optional = false
