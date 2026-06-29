@@ -12,6 +12,9 @@ models:
   "qwen2.5-coder:3b":
     tool_calling_trained: true
     native_tool_calling: false
+  "qwen2.5:7b-instruct":
+    tool_calling_trained: true
+    native_tool_calling: true
   "phi3":
     tool_calling_trained: false
     native_tool_calling: false

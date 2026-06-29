@@ -1,0 +1,4 @@
+timestamp,run,model,agent,nudges,n_questions,correctness_pct,faithfulness_pct
+20260629-1801,qwen2.5:7b-instruct-baseline,qwen2.5:7b-instruct,baseline,,24,100.0,79.2
+20260629-1801,qwen2.5:7b-instruct-tool-loop,qwen2.5:7b-instruct,tool-loop,false,24,91.7,70.8
+20260629-1801,qwen2.5:7b-instruct-tool-loop-nudged,qwen2.5:7b-instruct,tool-loop,true,24,58.3,45.8

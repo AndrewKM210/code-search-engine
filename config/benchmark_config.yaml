@@ -29,3 +29,14 @@ runs:
     model: "llama3.2:3b"
     agent: "tool-loop"
     nudges: true
+  - name: "qwen2.5:7b-instruct-baseline"
+    model: "qwen2.5:7b-instruct"
+    agent: "baseline"
+  - name: "qwen2.5:7b-instruct-tool-loop"
+    model: "qwen2.5:7b-instruct"
+    agent: "tool-loop"
+    nudges: false
+  - name: "qwen2.5:7b-instruct-tool-loop-nudged"
+    model: "qwen2.5:7b-instruct"
+    agent: "tool-loop"
+    nudges: true

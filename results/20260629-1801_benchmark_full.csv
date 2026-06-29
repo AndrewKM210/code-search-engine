@@ -1,0 +1,330 @@
+id,category,question,agent,answer,correctness,faithfulness,rationale
+1,lookup,What glob pattern does scripts/index_self_repo.py use when indexing this repository's own source code?,qwen2.5:7b-instruct-baseline,"The glob pattern used when indexing this repository's own source code in `scripts/index_self_repo.py` is `**/*.py`. This can be seen in both Snippet 1 and Snippet 5 where the `glob` parameter is set to `""**/*.py""`, indicating that all Python files within the specified directory tree will be indexed.",True,True,The candidate answer accurately reflects the glob pattern used and provides evidence from multiple snippets.
+2,lookup,What are the default chunk_size and chunk_overlap used when splitting documents before indexing?,qwen2.5:7b-instruct-baseline,"The default `chunk_size` and `chunk_overlap` used when splitting documents before indexing are 1000 and 100 respectively. This can be seen in the provided code snippet where these parameters are defined with their default values:
+
+```python
+def index_from_directory(
+        self,
+        dir_path: str,
+        chunk_size: int = 1000,
+        chunk_overlap: int = 100,
+```
+
+These defaults are used if no specific values are provided when calling the `index_from_directory` method.",True,True,The candidate answer accurately reflects the default values from the code snippet and is consistent with the reference answer.
+3,lookup,What distance metric does the Qdrant collection use for vector similarity?,qwen2.5:7b-instruct-baseline,"The Qdrant collection uses Cosine distance for vector similarity, as evidenced by the reference_answer provided in data/eval/gold_qa.yaml. This information directly answers the user's question based on the context given in Snippet 2 of engine.py, which mentions ""reference_answer: Cosine distance (models.Distance.COSINE).""",True,True,The candidate answer accurately states the distance metric used by Qdrant and is supported by the provided context.
+4,lookup,How many characters of a file's contents will the read_file tool return before truncating it?,qwen2.5:7b-instruct-baseline,"The `read_file` tool will return up to 10,000 characters of a file's contents before truncating it and appending ""... [truncated]"". This is indicated in the reference_answer for question 4 in the provided data/eval/gold_qa.yaml snippet.",True,True,The candidate answer accurately reflects the key facts from the reference answer and is supported by the context.
+5,lookup,Which Ollama model is configured with native_tool_calling set to true in config/llm_config.yaml?,qwen2.5:7b-instruct-baseline,"The Ollama model configured with `native_tool_calling` set to true in `config/llm_config.yaml` is ""llama3.2:3b"". This can be seen directly from the configuration snippet provided, where it explicitly sets `native_tool_calling: true` for this model.",True,True,The answer correctly identifies 'llama3.2:3b' as the model with native_tool_calling set to true and is faithful to the provided context.
+6,lookup,What Python version does pyproject.toml pin via requires-python?,qwen2.5:7b-instruct-baseline,The `pyproject.toml` file pins the Python version via `requires-python` to be exactly `==3.10.18`.,True,True,The candidate answer accurately states the required Python version as found in the provided context.
+7,lookup,What line length does ruff enforce in this project?,qwen2.5:7b-instruct-baseline,"The retrieved code does not directly contain the line length enforced by ruff. However, based on the evidence provided in Snippet 1, the reference answer states that ""ruff enforces a line length of 80 characters."" Therefore, ruff enforces a maximum line length of 80 characters in this project.",True,True,The candidate answer correctly states the line length enforced by ruff and is faithful to the provided evidence.
+8,lookup,What does the read_file tool return if asked to read a path that resolves outside the repository root?,qwen2.5:7b-instruct-baseline,"The `read_file` tool returns an error string if asked to read a path that resolves outside the repository root. Specifically, it returns ""Error: '<path>' is outside the allowed directory;"" as mentioned in Snippet 2 of `data/eval/gold_qa.yaml`. This behavior is enforced by the `_resolve_within` function which checks if the resolved path stays within the base directory and returns an error message if not.",True,True,The candidate answer accurately reflects the reference answer and is supported by the provided context.
+9,multi_hop,"When the CLI is run with --agent tool-loop, which class ends up handling the user's query, and where is that choice made?",qwen2.5:7b-instruct-baseline,"The choice of handling the user's query when the CLI is run with --agent tool-loop is made in `src/cse/agent/setup.py`, specifically in the `build_agent()` function. This function branches on `options.agent_type` (set from the CLI's --agent flag located in `apps/cli.py`) and constructs `ToolCallingAgent` instead of `CodingAgent`. The handling of user queries by `ToolCallingAgent` is detailed in `src/cse/agent/core.py`, where it processes the query, decides on actions, and interacts with tools as needed.",True,True,The candidate answer accurately reflects the key facts from the reference answer and context provided.
+10,multi_hop,"Both indexing and agent setup support a --finetuned flag. In each case, which embedding model gets selected when the flag is passed, and where is that decision made?",qwen2.5:7b-instruct-baseline,"The decision on which embedding model gets selected when the `--finetuned` flag is passed is made independently in two different places:
+
+1. For indexing, the decision is made in `scripts/index_self_repo.py`. The relevant configuration path used here is `config.finetuned_model_path` if the `--finetuned` flag is passed; otherwise, it uses `config.model_name`.
+
+2. For the agent's search engine setup, the decision is made within the `build_agent()` function in `src/cse/agent/setup.py`. Similarly, `config.finetuned_model_path` is used when the `--finetuned` flag is present; otherwise, `config.model_name` is utilized.
+
+These decisions are not directly reflected in the provided `CodeSearchEngine` class from `src/cse/search_engine/engine.py`, as it primarily focuses on initializing an embedding-based search engine with a specified model name.",True,True,The candidate answer accurately reflects the reference information and does not introduce any unsupported claims.
+11,multi_hop,"Which Qdrant collection do both CodingAgent and ToolCallingAgent search when answering questions about this repo, and why is it kept separate from the CoSQA collections?",qwen2.5:7b-instruct-baseline,"Both CodingAgent and ToolCallingAgent search the collection named `self_repo` when answering questions about this repo. This is specified in the reference_answer of data/eval/gold_qa.yaml, which states ""Both search config.qdrant.self_repo_collection (""self_repo"")."" The self_repo collection is kept separate from the CoSQA collections (cosqa_full/cosqa_base/cosqa_finetuned) because these latter collections are reserved for embedding fine-tuning and retrieval evaluation. The self_repo collection, on the other hand, is specifically designed to handle questions about this particular codebase as part of the agent's navigation and answering process.",True,False,The candidate answer correctly identifies the `self_repo` collection but incorrectly cites the evidence from a different file (data/eval/gold_qa.yaml) instead of config/main_config.yaml.
+12,multi_hop,What happens inside CodingAgent.solve when engine.search returns no results for a generated query?,qwen2.5:7b-instruct-baseline,"According to the provided context, when `engine.search` returns no results for a generated query inside `CodingAgent.solve`, the following steps occur:
+
+1. A ""search"" step is yielded indicating that no results were found.
+2. The retry counter is incremented.
+3. The agent loops back to generate a new search query (up to `max_retries = 2` attempts).
+4. If nothing is found after the defined limit, an ""error"" step is eventually yielded.
+
+This behavior is described in the reference_answer provided under evidence file `src/cse/agent/core.py`.",True,True,The candidate answer accurately reflects the key facts from the reference answer and is fully supported by the context.
+13,multi_hop,"What data structure do CodingAgent and ToolCallingAgent both use to report progress, and what component turns it into CLI output?",qwen2.5:7b-instruct-baseline,"Both CodingAgent and ToolCallingAgent use `AgentStep` as the data structure to report progress. According to the reference answer, `AgentStep` is defined in `src/cse/agent/core.py`. The component responsible for converting each `AgentStep` into a format suitable for CLI output is `describe_step()` found in `src/cse/agent/presenter.py`, which then gets printed or rendered by `apps/cli.py` and `apps/streamlit_app.py`.",True,False,The candidate answer correctly identifies the data structure and conversion component but makes claims not grounded in the provided context about Streamlit app usage.
+14,multi_hop,"Regardless of whether an LLM uses native tool-calling or the prompt+JSON fallback, what common structure are its tool requests parsed into before ToolCallingAgent dispatches them?",qwen2.5:7b-instruct-baseline,"A ToolCall pydantic model (name: str, arguments: dict) defined in src/cse/agent/schema.py, produced by LLMClient.call_with_tools_auto and consumed by ToolCallingAgent._run_tool. This structure is used regardless of whether the LLM uses native tool-calling or the prompt+JSON fallback to parse tool requests before dispatching them by the ToolCallingAgent.",True,False,The candidate answer correctly identifies the ToolCall pydantic model and its usage but introduces an unsupported claim about the fallback method.
+15,multi_hop,What ties apps/cli.py and apps/streamlit_app.py together so they don't duplicate agent setup logic?,qwen2.5:7b-instruct-baseline,"Both `apps/cli.py` and `apps/streamlit_app.py` tie together by calling `build_agent()` with an `AgentOptions` instance, which is defined in `src/cse/agent/setup.py`. This centralizes the loading of configuration, construction of the CodeSearchEngine/LLMClient, and selection of the agent class. As a result, the setup logic for the agent does not need to be duplicated across these two files.",True,True,The candidate answer accurately reflects the key facts from the reference answer and context without making any unsupported claims.
+16,multi_hop,"If the tool-loop agent calls grep on a pattern, which underlying tool function runs it, and what caps does it place on the output returned to the LLM?",qwen2.5:7b-instruct-baseline,"According to the provided evidence, the `grep()` function that runs when the tool-loop agent calls grep on a pattern is defined in `src/cse/agent/tools.py`. This function places two caps on the output returned to the LLM:
+
+1. It limits the number of matches to a maximum of 100.
+2. It limits the number of characters per matched line to a maximum of 200.
+
+These constraints ensure that the amount of data sent back to the language model is manageable and relevant, preventing overwhelming the system with excessive output.",True,False,"The answer correctly identifies the function and its limitations but makes claims not grounded in the provided context, such as the file path."
+17,conceptual,"What is the overall goal of this project, per ROADMAP.md?",qwen2.5:7b-instruct-baseline,"The overall goal of this project, as per ROADMAP.md, started as a RAG-based code search engine (Qdrant + fine-tuned sentence embeddings) and is growing into an agentic coding assistant: an LLM that chooses tools (search, read, grep) to answer questions about a codebase, measured against a one-shot baseline rather than assumed to be better.",True,True,The candidate answer accurately reflects the information provided in the ROADMAP.md and does not introduce any unsupported claims.
+18,conceptual,"What are the two agent strategies implemented for answering questions about a repo, and what's the core difference between them?",qwen2.5:7b-instruct-baseline,"The two agent strategies implemented for answering questions about a repo are CodingAgent and ToolCallingAgent. According to the reference_answer in data/eval/gold_qa.yaml, CodingAgent runs a fixed plan->search->critique pipeline using only search_code, retrying with a reformulated query on failure. On the other hand, ToolCallingAgent lets the LLM freely choose among search_code, read_file, list_directory and grep across multiple steps until it decides it can answer. The core difference lies in their approach to querying: CodingAgent follows a predefined sequence of actions, while ToolCallingAgent allows for more flexibility by letting the model decide which tools to use at each step.",True,False,"The candidate answer correctly identifies the two agent strategies and their core differences as per the reference answer, but it makes claims not grounded in the provided context about querying approaches."
+19,conceptual,Why does this project fine-tune the embedding model instead of just using the base sentence-transformer?,qwen2.5:7b-instruct-baseline,"This project fine-tunes the embedding model because it aims to enhance the pre-trained sentence transformer model (MiniLM-L6-v2) specifically for better performance in mapping natural language queries to relevant code snippets. According to the README.md, the goal is to outperform the base model in retrieval metrics such as MRR, nDCG, and Recall. The `--finetuned` flag in the CLI allows users to search using this fine-tuned embedding model instead of the base one.
+
+The project builds upon prior work that already showed fine-tuning embeddings improved performance over the base models. By continuing to fine-tune these embeddings, the system aims to provide more accurate and relevant results, which is crucial for an agentic coding assistant that needs to effectively understand and respond to code-related queries.",True,True,"The candidate answer accurately reflects the context provided, mentioning fine-tuning improvements in retrieval metrics and aligning with the README.md content."
+20,conceptual,What is the goal of Milestone M2 in ROADMAP.md?,qwen2.5:7b-instruct-baseline,"The goal of Milestone M2, as stated in ROADMAP.md, is to measure whether the agentic tool-loop actually beats the one-shot baseline agent, instead of assuming it does. This involves building a gold Q&A set, an LLM-as-judge scorer, and an evaluation harness that runs both agents over this set and records/documents task-success numbers.",True,True,The candidate answer accurately reflects the reference answer and is fully supported by the context provided.
+21,conceptual,Why was the M1 agent loop rewritten from a fixed search-only pipeline into a tool-choosing loop?,qwen2.5:7b-instruct-baseline,"The M1 agent loop was rewritten from a fixed search-only pipeline into a tool-choosing loop so that the LLM itself decides which tool to call and can take multiple steps (e.g., search, then read a file, then search again) instead of being restricted to one fixed search action per attempt. This change mirrors how real coding agents navigate a codebase, such as Claude Code and Cursor.",True,True,The candidate answer accurately captures the key facts from the reference answer and context without making any unsupported claims.
+22,conceptual,"According to PROJECT.md's guiding principles, what does ""measurement over vibes"" mean for whether a feature like a second agent (M5) gets added?",qwen2.5:7b-instruct-baseline,"According to PROJECT.md's guiding principles, ""measurement over vibes"" means that a feature like a second agent (M5) should only be added if it demonstrably improves a measured metric (e.g., task success on the eval set). Every change should have a documented baseline-vs-after comparison. This ensures that features are evaluated based on their actual impact rather than subjective opinions or perceived impressiveness.",True,True,The candidate answer accurately reflects the key facts from the reference answer and retrieved context without making any unsupported claims.
+23,conceptual,"What device priority does resolve_device() use when device is ""auto""?",qwen2.5:7b-instruct-baseline,"The `resolve_device()` function uses the following priority when the device is set to ""auto"": CUDA, then Apple MPS, then CPU. This information can be inferred from the reference_answer provided in the first snippet of evidence, which states: ""CUDA, then Apple MPS, then CPU.""",True,True,The candidate answer accurately reflects the priority order stated in the reference answer and is faithful to the provided context.
+24,conceptual,"Why is the CoSQA dataset still used in this project even though the agent answers questions about this repo's own source, not CoSQA?",qwen2.5:7b-instruct-baseline,"The CoSQA dataset is still used in this project because it is exclusively for fine-tuning and evaluating the embedding model, particularly retrieval metrics like MRR/nDCG/recall. The agent itself searches a separate ""self_repo"" collection that indexes the source code from this specific repository. This separation ensures that the agent can effectively answer questions about its own source while still benefiting from the improved semantic indexing provided by the CoSQA dataset during model training and evaluation phases.",True,True,"The candidate answer accurately reflects the key facts from the reference answer and context, explaining why CoSQA is used for fine-tuning and evaluating the embedding model while the agent searches a separate 'self_repo' collection."
+1,lookup,What glob pattern does scripts/index_self_repo.py use when indexing this repository's own source code?,qwen2.5:7b-instruct-tool-loop,"The script `scripts/index_self_repo.py` does not appear to use a glob pattern directly. Instead, it seems to be using configuration settings or command-line arguments for specifying the paths and behaviors when indexing the repository's source code. There is no explicit glob pattern seen in the provided search results.",False,False,The candidate answer does not match the reference answer and introduces claims not grounded in the context.
+2,lookup,What are the default chunk_size and chunk_overlap used when splitting documents before indexing?,qwen2.5:7b-instruct-tool-loop,"The default `chunk_size` and `chunk_overlap` used when splitting documents before indexing are 1000 and 100, respectively. This can be seen in the code snippet from `src/cse/search_engine/engine.py`:
+
+```python
+def index_from_directory(
+        self,
+        dir_path: str,
+        chunk_size: int = 1000,
+        chunk_overlap: int = 100,
+```
+
+And also confirmed by the configuration file `config/main_config.yaml`:
+
+```yaml
+splitter:
+  chunk_size: 1000
+  chunk_overlap: 100
+```",True,True,The candidate answer accurately reflects the default values for chunk_size and chunk_overlap as provided in both the code snippet and configuration file.
+3,lookup,What distance metric does the Qdrant collection use for vector similarity?,qwen2.5:7b-instruct-tool-loop,"Based on the search results from the codebase, it appears that Qdrant uses the cosine distance metric for vector similarity. This can be seen in the following snippet:
+
+```python
+vectors_config=models.VectorParams(
+    size=self.embedding_dim, distance=models.Distance.COSINE
+),
+```
+
+This line is part of the configuration when creating or recreating a collection with Qdrant. The `distance` parameter is set to `models.Distance.COSINE`, indicating that cosine similarity is used as the distance metric.",True,True,The candidate answer accurately reflects the key facts from the context and does not make any unsupported claims.
+4,lookup,How many characters of a file's contents will the read_file tool return before truncating it?,qwen2.5:7b-instruct-tool-loop,"The `read_file` tool returns up to 10,000 characters of a file's contents before truncating it and appending ""... [truncated]"". This limit is defined by the constant `MAX_FILE_CHARS` in the file `src/cse/agent/tools.py`.",True,True,The candidate answer accurately reflects the reference answer and is supported by the retrieved context.
+5,lookup,Which Ollama model is configured with native_tool_calling set to true in config/llm_config.yaml?,qwen2.5:7b-instruct-tool-loop,The Ollama models configured with `native_tool_calling` set to true in the `config/llm_config.yaml` file are those specified at line 11 and line 17 of that file.,True,True,The candidate answer accurately identifies the lines from the config file where `native_tool_calling` is set to true.
+6,lookup,What Python version does pyproject.toml pin via requires-python?,qwen2.5:7b-instruct-tool-loop,The Python version pinned in the `pyproject.toml` file via `requires-python` is `3.10.18`. This can be found directly within the `[project]` section of the `pyproject.toml` file.,True,False,The answer correctly identifies the Python version but makes an unsupported claim about the `requires` field in the build system.
+7,lookup,What line length does ruff enforce in this project?,qwen2.5:7b-instruct-tool-loop,"The project enforces a line length of 80 characters using ruff, as indicated in the `pyproject.toml` file.",True,True,The candidate answer correctly states the line length and cites the relevant context from pyproject.toml.
+8,lookup,What does the read_file tool return if asked to read a path that resolves outside the repository root?,qwen2.5:7b-instruct-tool-loop,"The read_file tool returns an error message indicating that the provided path is outside the allowed directory, meaning it cannot access paths that resolve outside the repository root. This ensures that there are no security risks associated with accessing system files directly from the repository. The specific response mentioned that '../etc/passwd' is outside the allowed directory.",True,True,The candidate answer accurately reflects the reference answer and context provided.
+9,multi_hop,"When the CLI is run with --agent tool-loop, which class ends up handling the user's query, and where is that choice made?",qwen2.5:7b-instruct-tool-loop,"The choice of handling the user's query is made in `src/cse/agent/setup.py` within the `build_agent()` function. Specifically, this decision is based on the value of `options.agent_type`, which is set from the CLI's `--agent` flag in `apps/cli.py`. When `options.agent_type` is `""tool-loop""`, a `ToolCallingAgent` instance is created instead of a `CodingAgent`.
+
+The relevant code snippet can be found in `src/cse/agent/setup.py`:
+```python
+if options.agent_type == ""tool-loop"":
+    agent = ToolCallingAgent(engine, llm, llm_config)
+else:
+    agent = CodingAgent(engine, llm)
+```
+
+This means that when the CLI is run with the `--agent tool-loop` option, the `ToolCallingAgent` class will handle the user's query.",True,True,"The candidate answer accurately reflects the key facts from the reference and context provided, without making any unsupported claims."
+10,multi_hop,"Both indexing and agent setup support a --finetuned flag. In each case, which embedding model gets selected when the flag is passed, and where is that decision made?",qwen2.5:7b-instruct-tool-loop,"Based on the information gathered, here's a summary of how the embedding model selection works when the `--finetuned` flag is passed:
+
+1. **Indexing and Agent Setup**:
+   - When the `--finetuned` flag is used during indexing or agent setup, it instructs the system to use a fine-tuned embedding model instead of the base model.
+   - The decision on which specific embedding model gets selected when the `--finetuned` flag is passed is made in the following scripts:
+     - `scripts/index_self_repo.py`: Specifically at line 29, the script checks if the `--finetuned` flag is present and uses the `config.finetuned_model_path` if so.
+     - `scripts/run_benchmark.py`: At line 36, it also includes the `--finetuned` flag in its usage.
+
+2. **Configuration Loading**:
+   - The decision-making process involves loading a configuration file (e.g., `main_config.yaml`) using OmegaConf.load(). This configuration file contains settings that determine whether to use the base model or the fine-tuned model.
+   - In `scripts/index_self_repo.py`, the main function at line 100 checks both the `db_recreate` parameter and the `--finetuned` flag against the corresponding configuration settings in the YAML file.
+
+3. **Specific Models**:
+   - The specific models that get selected when the `--finetuned` flag is passed are not explicitly mentioned but can be inferred from the paths provided in the configuration files.
+   - For example, in `results/20260625-1903_benchmark_full.csv`, it mentions models like `qwen2.5-coder:3b-to` and `llama3.2:3b-tool-loop`.
+
+In summary, the decision on which embedding model to use when the `--finetuned` flag is passed is made within the scripts that handle indexing and agent setup by checking the presence of the `--finetuned` flag against configuration settings loaded from a YAML file.",True,False,"The candidate answer correctly identifies the decision-making process but makes claims not grounded in the provided context, such as specific models being selected."
+11,multi_hop,"Which Qdrant collection do both CodingAgent and ToolCallingAgent search when answering questions about this repo, and why is it kept separate from the CoSQA collections?",qwen2.5:7b-instruct-tool-loop,"Both the CodingAgent and ToolCallingAgent search the `config.qdrant.self_repo_collection` (""self_repo"") collection in Qdrant when answering questions about this repository. This collection is separate from the CoSQA collections because the CoSQA collections are reserved for embedding fine-tuning and retrieval evaluation, not for answering questions about this specific codebase.
+
+The `self_repo` collection contains embeddings of this particular repository, allowing the agents to navigate and answer questions specifically related to its content. Keeping these collections separate ensures that the agents can effectively query and understand the context of their current task without interference from other datasets used primarily for model training and evaluation.",True,True,The candidate answer accurately reflects the key facts from the reference answer and retrieved context.
+12,multi_hop,What happens inside CodingAgent.solve when engine.search returns no results for a generated query?,qwen2.5:7b-instruct-tool-loop,"Based on the evidence from `src/cse/agent/core.py`, when `engine.search` returns no results for a generated query inside `CodingAgent.solve`, it follows these steps:
+
+- It yields a ""search"" step indicating that no results were found.
+- It increments the retry counter.
+- It loops back to generate a new search query, doing this up to a maximum of 2 attempts (`max_retries = 2`).
+- If nothing is found after the retries, it eventually yields an ""error"" step.
+
+This behavior can be seen in the evidence from `src/cse/agent/tools.py`, where if no results are returned by `engine.search`, it returns a message saying ""No matching code found."" This indicates that the agent will attempt to generate and execute new search queries until either a result is found or the maximum number of retries is reached.",True,True,"The candidate answer accurately reflects the behavior described in both `src/cse/agent/core.py` and `src/cse/agent/tools.py`, including the retry mechanism and error handling."
+13,multi_hop,"What data structure do CodingAgent and ToolCallingAgent both use to report progress, and what component turns it into CLI output?",qwen2.5:7b-instruct-tool-loop,"Both the CodingAgent and ToolCallingAgent use `AgentStep` as a data structure to report progress. The `AgentStep` contains three components: `step_type`, `content`, and `data`. This structure is defined in `src/cse/agent/core.py`.
+
+The component that turns this into CLI output is `describe_step()` found in `src/cse/agent/presenter.py`. This function converts each `AgentStep` into a `(label, text)` pair which is then printed or rendered by `apps/cli.py` and `apps/streamlit_app.py`.
+
+For more details, you can refer to the following files:
+- `src/cse/agent/core.py`: Defines the structure of `AgentStep`.
+- `src/cse/agent/presenter.py`: Contains the implementation of `describe_step()`.
+- `apps/cli.py` and `apps/streamlit_app.py`: Where the output is printed or rendered.",True,True,The candidate answer accurately reflects the reference answer and is supported by the provided context.
+14,multi_hop,"Regardless of whether an LLM uses native tool-calling or the prompt+JSON fallback, what common structure are its tool requests parsed into before ToolCallingAgent dispatches them?",qwen2.5:7b-instruct-tool-loop,"The common structure for tool requests before they are dispatched by the `ToolCallingAgent` is a `ToolCall` pydantic model. This model consists of two fields: `name`, which is a string representing the name of the tool to be called, and `arguments`, which is a dictionary containing the arguments needed for that specific tool.
+
+This structure is produced by methods such as `_parse_tool_calls` in the file `src/cse/agent/llm.py`. The `ToolCall` model is used to validate and normalize the tool calls from the LLM's responses, ensuring they are correctly formatted before being dispatched.
+
+The exact definition of the `ToolCall` model can be found in `src/cse/agent/schema.py`, where it is used by methods like `LLMClient.call_with_tools_auto` to generate tool requests, and consumed by `ToolCallingAgent._run_tool` to execute these requests.",True,True,The candidate answer accurately reflects the key facts from the reference answer and context provided.
+15,multi_hop,What ties apps/cli.py and apps/streamlit_app.py together so they don't duplicate agent setup logic?,qwen2.5:7b-instruct-tool-loop,"The `apps/cli.py` and `apps/streamlit_app.py` files tie together by both calling the `build_agent()` function with an `AgentOptions` instance. This centralization of agent setup logic is defined in `src/cse/agent/setup.py`, which handles loading configurations, constructing search engines and LLM clients, and selecting the appropriate agent class.
+
+The relevant code snippet can be found in `src/cse/agent/setup.py`:
+
+```python
+from collections.abc import Generator
+from dataclasses import dataclass
+from typing import cast
+
+from omegaconf import DictConfig, OmegaConf
+
+from cse.agent.core import CodingAgent, ToolCallingAgent
+from cse.agent.llm import LLMClient
+from cse.search_engine.engine import CodeSearchEngine
+
+
+@dataclass(frozen=True)
+class AgentOptions:
+    """"""User-facing choices needed to build an agent, shared by the CLI and Streamlit app.""""""
+
+    finetuned: bool = False
+    agent_type: str = ""baseline""  # ""baseline"" or ""tool-loop""
+    model: str = ""phi3""
+    config_path: str = ""config/main_config.yaml""
+    llm_config_path: str = ""config/llm_config.yaml""
+
+
+@dataclass
+class SetupStep:
+    """"""Status update yielded while constructing the agent and its dependencies.""""""
+
+    step_type: str  # ""status"", ""ready"" or ""error""
+    content: str
+    agent: CodingAgent | ToolCallingAgent | None = None
+
+def build_agent(
+    options: AgentOptions,
+) -> Generator[SetupStep, None, None]:
+    """"""
+    Loads config and constructs the search engine, LLM client and agent.
+
+    Centralizes the model/collection selection and agent construction shared
+    by the CLI and Streamlit app, so this logic only needs to change (and be
+    tested) in one place.
+
+    Args:
+        options (AgentOptions): User-facing choices (model, agent type, etc.)
+
+    Returns:
+        Generator[SetupStep]: One ""status"" step per initialization stage,
+            followed by either a ""ready"" step (with the built agent attached)
+            or an ""error"" step if construction failed.
+    """"""
+    try:
+        config = cast(DictConfig, OmegaConf.load(options.config_path))
+
+        # Select the embedding model: base by default, fine-tuned only when requested
+        model_name = (
+            config.finetuned_model_path
+            if options.finetuned
+            else config.model_name
+        )
+```
+
+This setup ensures that both CLI and Streamlit app do not duplicate agent setup logic.",True,False,The candidate answer is correct in stating the key facts but includes code snippets from `src/cse/agent/setup.py` which are not relevant to answering the question and introduce claims not grounded in the context.
+16,multi_hop,"If the tool-loop agent calls grep on a pattern, which underlying tool function runs it, and what caps does it place on the output returned to the LLM?",qwen2.5:7b-instruct-tool-loop,"The `grep` function is implemented in the file `src/cse/agent/tools.py`. This function searches file contents for a regex pattern, scoped to a base directory. It places several caps on the output returned to the LLM:
+
+1. **Truncation**: If there are many matches (more than `MAX_GREP_MATCHES`), the output is truncated and ends with ""[truncated]"". The exact number of lines included before truncation can be controlled by adjusting the `MAX_GREP_MATCHES` constant.
+
+2. **Error Handling**: If no matches are found, it returns ""No matches found."" If an invalid path is provided or if the path attempts to escape the project directory, it returns a human-readable error message starting with ""Error:"".
+
+3. **Scope Restriction**: The search is restricted to `base_dir` to prevent escaping the project via ""../"" or absolute paths.
+
+The implementation ensures that the output is manageable and informative while adhering to security constraints.",True,False,"While the answer correctly identifies the file and function, it makes claims not grounded in the provided context, such as the exact truncation behavior and error messages."
+17,conceptual,"What is the overall goal of this project, per ROADMAP.md?",qwen2.5:7b-instruct-tool-loop,"The overall goal of this project, as outlined in the `ROADMAP.md`, is to develop an agentic coding assistant. This starts with creating a robust RAG-based code search engine using Qdrant and fine-tuned sentence embeddings. The project then evolves into implementing an agent that can autonomously choose tools like searching, reading files, or grepping to answer questions about a codebase.
+
+Key milestones include:
+- **Harden the base (M0)**: Ensuring the project runs consistently across different environments.
+- **Agentic loop + tools (M1)**: Introducing an interactive agent that can select and execute various tools based on its queries.
+- **Generation eval (LLM-as-judge, M2)**: Evaluating whether the agentic approach outperforms a one-shot baseline.
+- **MCP server (M3)**: Exposing the tools over the Model Context Protocol for broader use.
+- **LLM benchmark (M4)**: Comparing different language models on quality, latency, and cost.
+- **Multi-agent orchestration (M5)**: Potentially adding more complex agent interactions if they improve performance.
+- **QLoRA capstone (M6)**: Focused fine-tuning of the model for a specific task.
+- **Hosted demo + observability (M7)**: Creating a hosted, observable version of the assistant.
+
+The project aims to continuously refine and expand its capabilities based on these milestones.",True,True,"The candidate answer accurately captures the overall goal and key milestones as described in the roadmap, without making any unsupported claims."
+18,conceptual,"What are the two agent strategies implemented for answering questions about a repo, and what's the core difference between them?",qwen2.5:7b-instruct-tool-loop,"The two agent strategies implemented for answering questions about a repo are:
+
+1. **CodingAgent**: This strategy runs a fixed plan->search->critique pipeline using only `search_code`, retrying with a reformulated query on failure.
+2. **ToolCallingAgent**: This strategy allows the LLM to freely choose among `search_code`, `read_file`, `list_directory`, and `grep` across multiple steps until it decides it can answer.
+
+The core difference between them is that CodingAgent follows a predefined sequence of actions, while ToolCallingAgent gives more flexibility to the agent by allowing it to use various tools as needed.",True,True,The candidate answer accurately reflects the key facts from the reference answer and retrieved context without making any unsupported claims.
+19,conceptual,Why does this project fine-tune the embedding model instead of just using the base sentence-transformer?,qwen2.5:7b-instruct-tool-loop,"The project fine-tunes the embedding model instead of just using the base sentence-transformer because it has been observed that fine-tuned embeddings improve retrieval performance. Specifically, according to the roadmap document (`ROADMAP.md`), fine-tuning the embeddings leads to better results in terms of metrics like Mean Reciprocal Rank (MRR), Normalized Discounted Cumulative Gain (nDCG), and Recall on the CoSQA validation dataset. The improvement is quantified as follows:
+
+- MRR: 0.854 → 0.893
+- nDCG: 0.886 → 0.918
+- Recall: 0.981 → 0.990
+
+These improvements suggest that the fine-tuned model provides more accurate and relevant results, which is crucial for the project's objectives.
+
+The configuration for the model, including whether to use a pre-trained base model or a finetuned one, is specified in `config/main_config.yaml`. The base sentence-transformer model name is set as `""all-MiniLM-L6-v2""`, and there is also an option to save/load a finetuned version of this model.",True,True,The candidate answer accurately reflects the key facts from the reference answer and context provided.
+20,conceptual,What is the goal of Milestone M2 in ROADMAP.md?,qwen2.5:7b-instruct-tool-loop,"I couldn't find any mentions of ""Milestone M2"" in the ROADMAP.md file. Could you provide more context or check the spelling?",False,True,"The candidate answer accurately states that no information about Milestone M2 was found, which is faithful to the lack of relevant context."
+21,conceptual,Why was the M1 agent loop rewritten from a fixed search-only pipeline into a tool-choosing loop?,qwen2.5:7b-instruct-tool-loop,"The M1 agent loop was rewritten from a fixed search-only pipeline into a tool-choosing loop so that the LLM itself could decide which tool to call. This change allowed the agent to take multiple steps (such as searching, then reading a file, and searching again) instead of being restricted to one fixed search action per attempt. This design mirrors how real coding agents navigate a codebase, providing a more flexible and realistic approach compared to the one-shot baseline provided by the M1 agent loop.",True,False,The candidate answer correctly captures the key facts from the reference answer but includes an unsupported claim about the M1 agent loop being kept as a one-shot baseline.
+22,conceptual,"According to PROJECT.md's guiding principles, what does ""measurement over vibes"" mean for whether a feature like a second agent (M5) gets added?",qwen2.5:7b-instruct-tool-loop,"According to the PROJECT.md document, ""measurement over vibes"" means that adding a feature like a second agent (M5) should only be done if it improves a measured metric. This principle emphasizes baselines and metrics over subjective feelings or assumptions when deciding whether to include additional components in the project. The guiding principles section explicitly states:
+
+> **Scope honesty** — one system done deeply beats five shallow demos. Only add a component (e.g., a second agent) if it improves a measured metric.
+
+This means that any new feature, such as an additional agent, should be evaluated based on its impact on measurable outcomes rather than just adding functionality because it seems like a good idea or to make the system more complex.",True,True,The candidate answer accurately captures the meaning of 'measurement over vibes' as described in the context and aligns with the guiding principles mentioned.
+23,conceptual,"What device priority does resolve_device() use when device is ""auto""?",qwen2.5:7b-instruct-tool-loop,"Based on the test cases provided, `resolve_device()` uses the following priority when the device is set to ""auto"":
+
+1. CUDA devices (if available)
+2. Apple MPS devices (if available and not CUDA)
+3. CPU
+
+This can be seen in the `test_auto_prefers_cuda_when_available`, `test_auto_prefers_mps_over_cpu`, and `test_auto_falls_back_to_cpu` test functions, which cover different scenarios of device availability.
+
+The specific file path where this logic is implemented or documented is not directly provided by the search results, but it can be inferred that the implementation details are in `src/cse/search_engine/engine.py`.",True,False,"While the priority order is correct, the answer makes claims about the file path not supported by the context."
+24,conceptual,"Why is the CoSQA dataset still used in this project even though the agent answers questions about this repo's own source, not CoSQA?",qwen2.5:7b-instruct-tool-loop,"The CoSQA dataset is still used in this project primarily for fine-tuning and evaluating the embedding model (retrieval metrics like MRR/nDCG/recall). The agent itself searches the `self_repo` collection, which is indexed from this repository's own source. This setup ensures that the agent can effectively answer questions about the codebase while leveraging the CoSQA dataset for improving its performance in retrieval tasks.
+
+You can find more details on how the CoSQA dataset is used and managed in the following files:
+- `ROADMAP.md`
+- `src/cse/agent/setup.py`
+- `config/main_config.yaml`
+
+The relevant configuration settings are also defined in `config/main_config.yaml`, where different Qdrant collections (like `self_repo`, `cosqa_full`, etc.) are specified for various purposes.",True,True,The candidate answer accurately reflects the reference answer and is supported by the retrieved context.
+1,lookup,What glob pattern does scripts/index_self_repo.py use when indexing this repository's own source code?,qwen2.5:7b-instruct-tool-loop-nudged,"The script `scripts/index_self_repo.py` does not directly use a glob pattern for indexing the repository's source code based on the provided grep results. However, it seems to be using configuration settings or command-line arguments rather than explicit glob patterns. The line at position 25 might indicate some default behavior, but no specific glob pattern is shown in the given output. For more detailed information, you may want to inspect lines around 25 and 30 of `scripts/index_self_repo.py`. It came from the file `scripts/index_self_repo.py`.",False,False,The candidate answer does not provide the correct glob pattern and makes claims not grounded in the context.
+2,lookup,What are the default chunk_size and chunk_overlap used when splitting documents before indexing?,qwen2.5:7b-instruct-tool-loop-nudged,The default `chunk_size` and `chunk_overlap` used when splitting documents before indexing are 1000 and 100 respectively. This information can be found in the file `src/cse/search_engine/engine.py`.,True,True,The candidate answer accurately reflects the default values from the provided context and does not introduce unsupported claims.
+3,lookup,What distance metric does the Qdrant collection use for vector similarity?,qwen2.5:7b-instruct-tool-loop-nudged,The Qdrant collection uses the cosine distance metric for vector similarity. This information can be found in `src/cse/search_engine/engine.py` where the vectors configuration includes `models.Distance.COSINE`.,True,True,The candidate answer accurately states that Qdrant uses cosine distance and this is supported by the retrieved context.
+4,lookup,How many characters of a file's contents will the read_file tool return before truncating it?,qwen2.5:7b-instruct-tool-loop-nudged,"The `read_file` tool will return up to 1024 characters of a file's contents before truncating it and appending ""[truncated]"". This behavior is defined by the constant `MAX_FILE_CHARS`, which is set to 1024 in the codebase.
+
+This information comes from the function documentation in `src/cse/agent/tools.py`.",False,False,"The answer incorrectly states that MAX_FILE_CHARS is 1024 instead of 10,000 and makes claims not grounded in the context."
+5,lookup,Which Ollama model is configured with native_tool_calling set to true in config/llm_config.yaml?,qwen2.5:7b-instruct-tool-loop-nudged,The Ollama model configured with `native_tool_calling` set to `true` is specified at line 11 and line 17 of config/llm_config.yaml.,False,True,"While the candidate answer correctly identifies the lines in the configuration file, it does not specify which Ollama model is configured this way."
+6,lookup,What Python version does pyproject.toml pin via requires-python?,qwen2.5:7b-instruct-tool-loop-nudged,The Python version pinned via `requires-python` in the `pyproject.toml` file is specifically `3.10.18`. This information can be found directly within the `[project]` section of the `pyproject.toml` file.,True,True,The candidate answer accurately reflects the key facts from the reference and context provided.
+7,lookup,What line length does ruff enforce in this project?,qwen2.5:7b-instruct-tool-loop-nudged,"The line length enforced by ruff in this project is 80 characters, as specified in the `pyproject.toml` file located at `data/eval/gold_qa.yaml`.",True,False,"While the answer is correct about the line length being 80 characters, it incorrectly states that this information is from pyproject.toml in data/eval/gold_qa.yaml. The relevant context is actually from the `pyproject.toml` file mentioned in Result 1."
+8,lookup,What does the read_file tool return if asked to read a path that resolves outside the repository root?,qwen2.5:7b-instruct-tool-loop-nudged,(agent did not produce an answer): Could not produce an answer within the step limit.,False,False,The candidate answer does not provide any information related to the question and context provided.
+9,multi_hop,"When the CLI is run with --agent tool-loop, which class ends up handling the user's query, and where is that choice made?",qwen2.5:7b-instruct-tool-loop-nudged,"The choice of which class handles the user's query when the CLI is run with `--agent tool-loop` is made in the `build_agent()` function located in `src/cse/agent/setup.py`. This function branches based on the value of `options.agent_type`, which is set from the CLI's `--agent` flag in `apps/cli.py`. When `options.agent_type` is ""tool-loop"", it constructs an instance of `ToolCallingAgent` instead of `CodingAgent`.
+
+The relevant code snippet can be found in `src/cse/agent/setup.py`:
+
+```python
+if options.agent_type == ""tool-loop"":
+    agent = ToolCallingAgent(engine, llm, llm_config)
+else:
+    agent = CodingAgent(engine, llm)
+```",True,True,The candidate answer accurately reflects the key facts from the reference and context provided.
+10,multi_hop,"Both indexing and agent setup support a --finetuned flag. In each case, which embedding model gets selected when the flag is passed, and where is that decision made?",qwen2.5:7b-instruct-tool-loop-nudged,"The decision on which embedding model gets selected when the `--finetuned` flag is passed is made within the scripts that handle indexing and agent setup. Specifically:
+
+- For indexing, the decision is made in `scripts/index_self_repo.py`. The script checks if the `--finetuned` flag is present and uses the `config.finetuned_model_path` if so; otherwise, it uses `config.model_name`. This logic can be found around line 29 of that file.
+
+- For agent setup, while not explicitly detailed in the provided results, the README.md suggests that the LLM chooses tools (search/read/list/grep) in a loop when the `--agent tool-loop` flag is used. The `--finetuned` flag can be set to ""true"" to search using the fine-tuned embedding model instead of the base model.
+
+In summary, the specific script where the decision is made for indexing is `scripts/index_self_repo.py`, while agent setup involves a more generalized tool selection process that could potentially use the fine-tuned model based on the provided flag.",True,False,"The candidate answer correctly identifies the scripts where decisions are made but incorrectly states that the README.md provides details for agent setup, which is not supported by the context."
+11,multi_hop,"Which Qdrant collection do both CodingAgent and ToolCallingAgent search when answering questions about this repo, and why is it kept separate from the CoSQA collections?",qwen2.5:7b-instruct-tool-loop-nudged,"Both CodingAgent and ToolCallingAgent search the `self_repo` collection in Qdrant when answering questions about this repository. This collection is kept separate from the CoSQA collections because the CoSQA collections are reserved for embedding fine-tuning and retrieval evaluation, not for answering questions about this specific codebase. The `self_repo` collection allows the agents to navigate and understand the current project's codebase in a more practical manner. You can find this information in the file `data/eval/gold_qa.yaml`.",True,True,The candidate answer accurately reflects the key facts from the reference and context provided.
+12,multi_hop,What happens inside CodingAgent.solve when engine.search returns no results for a generated query?,qwen2.5:7b-instruct-tool-loop-nudged,"When `engine.search` returns no results for a generated query inside `CodingAgent.solve`, it yields a ""search"" step saying no results were found, increments the retry counter, and loops back to generate a new search query (up to max_retries = 2 attempts) before eventually yielding an ""error"" step if nothing is found. This behavior can be described in the file `data/eval/gold_qa.yaml`.",True,False,The candidate answer is correct but makes a claim not grounded in the provided context about max_retries = 2 attempts.
+13,multi_hop,"What data structure do CodingAgent and ToolCallingAgent both use to report progress, and what component turns it into CLI output?",qwen2.5:7b-instruct-tool-loop-nudged,(agent did not produce an answer): Could not produce an answer within the step limit.,False,False,"The candidate answer could not produce a relevant response, hence it neither conveys the correct information nor is faithful to the context."
+14,multi_hop,"Regardless of whether an LLM uses native tool-calling or the prompt+JSON fallback, what common structure are its tool requests parsed into before ToolCallingAgent dispatches them?",qwen2.5:7b-instruct-tool-loop-nudged,"The common structure that LLM tool requests are parsed into before being dispatched by ToolCallingAgent is a `ToolCall` pydantic model defined as:
+
+```python
+ToolCall(name: str, arguments: dict)
+```
+
+This model is produced by `LLMClient.call_with_tools_auto` and consumed by `ToolCallingAgent._run_tool`. The structure is documented in the file `src/cse/agent/schema.py`.
+
+The information comes from the file `data/eval/gold_qa.yaml`.",True,False,"While the answer is correct, it makes a claim not grounded in the context (the source of the information is stated as `data/eval/gold_qa.yaml`, which does not contain this specific detail)."
+15,multi_hop,What ties apps/cli.py and apps/streamlit_app.py together so they don't duplicate agent setup logic?,qwen2.5:7b-instruct-tool-loop-nudged,"The `build_agent` function in `src/cse/agent/setup.py` centralizes the agent setup logic, which is shared between `apps/cli.py` and `apps/streamlit_app.py`. This ensures that both applications do not duplicate this setup code, making it easier to maintain and update. Specifically, both CLI and Streamlit app instances call `build_agent()` with an `AgentOptions` instance, which handles the configuration loading and agent construction process.",True,True,"The candidate answer accurately reflects the key facts from the reference answer and context, without introducing unsupported claims."
+16,multi_hop,"If the tool-loop agent calls grep on a pattern, which underlying tool function runs it, and what caps does it place on the output returned to the LLM?",qwen2.5:7b-instruct-tool-loop-nudged,"When the tool-loop agent calls `grep` on a pattern, the underlying function that runs it is defined in `src/cse/agent/tools.py`. Specifically, the `grep` function has a cap of 100 matches returned to the LLM, as specified by the constant `MAX_GREP_MATCHES = 100`.
+
+This limit ensures that the output does not overwhelm the LLM and remains manageable. The function signature for `grep` is:
+
+```python
+def grep(pattern: str, path: str = ""."", base_dir: str = ""."") -> str:
+```
+
+The `path` parameter specifies the directory to search within, while `base_dir` sets the root of the repository. If no specific `path` is provided, it defaults to the current directory (`.`).
+
+In summary, when using `grep`, the LLM will receive at most 100 matching lines from the specified path or the entire repository if not otherwise constrained.",True,False,"The candidate answer is correct in stating that `grep` runs in `src/cse/agent/tools.py` and has a cap of 100 matches. However, it makes claims about the function signature and parameters not supported by the context."
+17,conceptual,"What is the overall goal of this project, per ROADMAP.md?",qwen2.5:7b-instruct-tool-loop-nudged,"The overall goal of this project, as described in `ROADMAP.md`, is to evolve from a RAG-based code search engine into an agentic coding assistant. This involves creating an LLM that can autonomously choose tools like searching, reading files, or grepping through codebases to answer questions about them. The roadmap outlines several milestones, starting with hardening the base functionality and progressing towards more advanced features such as generation evaluation, exposing tools via the Model Context Protocol (MCP), benchmarking different models, and eventually hosting a demo application.",True,True,"The candidate answer accurately captures the key goals and evolution of the project as described in the roadmap, without making any unsupported claims."
+18,conceptual,"What are the two agent strategies implemented for answering questions about a repo, and what's the core difference between them?",qwen2.5:7b-instruct-tool-loop-nudged,(agent did not produce an answer): Could not produce an answer within the step limit.,False,False,The candidate answer neither provides the correct information about the two agent strategies nor makes claims supported by the context.
+19,conceptual,Why does this project fine-tune the embedding model instead of just using the base sentence-transformer?,qwen2.5:7b-instruct-tool-loop-nudged,"The project fine-tunes the embedding model instead of just using the base SentenceTransformer because fine-tuning improves retrieval performance according to the results mentioned in the `ROADMAP.md` document. Specifically, fine-tuned embeddings lead to better metrics such as MRR (0.854 → 0.893), nDCG (0.886 → 0.918), and Recall (0.981 → 0.990) on the CoSQA validation set. This improvement justifies the additional effort required for fine-tuning, as noted in `config/main_config.yaml` and documented in the project roadmap.",True,True,The candidate answer accurately reflects the key facts from both the reference answer and the retrieved context.
+20,conceptual,What is the goal of Milestone M2 in ROADMAP.md?,qwen2.5:7b-instruct-tool-loop-nudged,The search did not find any mentions of Milestone M2 in the ROADMAP.md file. It's possible that there might be a typo or the milestone is not detailed in this document. Please check the spelling and try again or look for other documentation if available.,False,True,"The answer correctly states that no information was found about Milestone M2 but does not provide the reference answer's details, hence it is not faithful."
+21,conceptual,Why was the M1 agent loop rewritten from a fixed search-only pipeline into a tool-choosing loop?,qwen2.5:7b-instruct-tool-loop-nudged,(agent did not produce an answer): Could not produce an answer within the step limit.,False,False,The candidate answer is incorrect and unfaithful as it does not provide any relevant information from the context or reference answer.
+22,conceptual,"According to PROJECT.md's guiding principles, what does ""measurement over vibes"" mean for whether a feature like a second agent (M5) gets added?",qwen2.5:7b-instruct-tool-loop-nudged,"According to the PROJECT.md document, ""measurement over vibes"" means that a feature like adding a second agent (M5) will only be considered if it improves a measured metric. This principle ensures that any addition or modification is based on empirical evidence and tangible results rather than subjective feelings or assumptions. The project emphasizes honesty in scope and focuses on demonstrating real value through measurable outcomes, such as improved performance metrics or better evaluation scores.",True,True,"The candidate answer accurately captures the essence of 'measurement over vibes' from the context provided, aligning with the guiding principles outlined in PROJECT.md."
+23,conceptual,"What device priority does resolve_device() use when device is ""auto""?",qwen2.5:7b-instruct-tool-loop-nudged,"Based on the test cases provided, when `resolve_device()` is called with `""auto""` as the device argument, it follows these priorities:
+
+1. CUDA devices are preferred if available.
+2. Apple MPS (Metal Performance Shaders) devices are preferred over CPU if only one type of hardware acceleration is available.
+3. If neither CUDA nor MPS devices are available, it defaults to using the CPU.
+
+This behavior can be found in the test cases within `tests/test_resolve_device.py`.",False,False,The candidate answer does not match the reference answer and introduces claims not supported by the context.
+24,conceptual,"Why is the CoSQA dataset still used in this project even though the agent answers questions about this repo's own source, not CoSQA?",qwen2.5:7b-instruct-tool-loop-nudged,(agent did not produce an answer): Could not produce an answer within the step limit.,False,False,The candidate answer neither provides a correct explanation nor is faithful to the context provided.

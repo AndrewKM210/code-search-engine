@@ -1,0 +1,89 @@
+id,category,question,agent,answer,correctness,faithfulness,rationale
+1,lookup,What glob pattern does scripts/index_self_repo.py use when indexing this repository's own source code?,baseline,"The glob pattern used when indexing this repository's own source code is ""**/*.py"" in the `scripts/index_self_repo.py` script. This tells the indexing engine to look for Python files (`*.py`) within the repository directory. 
+
+This is achieved by passing the `glob` parameter with the value `""**/*.py""` to the `index_from_directory` method, which is called twice in the script: once when initializing the CodeSearchEngine and again when actually indexing the repository source code.",True,True,The candidate answer accurately reflects the retrieved context and correctly identifies the glob pattern used.
+2,lookup,What are the default chunk_size and chunk_overlap used when splitting documents before indexing?,baseline,"The default `chunk_size` used when splitting documents before indexing is 1000. The `chunk_overlap` is also set to 100.
+
+Explanation:
+
+In the provided code snippets, we can see that in the `index_from_directory` function, `chunk_size` and `chunk_overlap` are parameters with default values of 1000 and 100 respectively. 
+
+Additionally, in the `main_config.yaml` file, these values are explicitly set to 1000 and 100.
+
+This means that when splitting documents before indexing, the code will use a chunk size of 1000 and an overlap of 100 by default if not specified otherwise.",True,False,The candidate answer correctly identifies the default values but makes claims about additional configuration files that are not supported by the provided context.
+3,lookup,What distance metric does the Qdrant collection use for vector similarity?,baseline,"The Qdrant collection uses the cosine distance metric for vector similarity. This can be seen in Snippet 2 of the retrieved code context, where the `distance` parameter in the `models.VectorParams` object is set to `models.Distance.COSINE`. The `cosine` distance metric measures the cosine similarity between two vectors, which is a common choice for text embeddings and vector similarity tasks.",True,True,The candidate answer accurately reflects the key facts from the reference answer and context.
+9,multi_hop,"When the CLI is run with --agent tool-loop, which class ends up handling the user's query, and where is that choice made?",baseline,"The class that ends up handling the user's query when the CLI is run with `--agent tool-loop` is `ToolCallingAgent`. This choice is made in the `build_agent()` function in `src/cse/agent/setup.py`, which branches on the value of `options.agent_type` (set from the CLI's `--agent` flag) and constructs `ToolCallingAgent` instead of `CodingAgent`.
+
+The code snippet shows this behavior by comparing the output of `build_agent(AgentOptions(agent_type=""baseline""))` with `build_agent(AgentOptions(agent_type=""tool-loop""))`. The latter yields a list of steps where the last step is an instance of `ToolCallingAgent`, indicating that it handles the user's query.",True,True,The candidate answer accurately reflects the key facts from the reference and context provided.
+10,multi_hop,"Both indexing and agent setup support a --finetuned flag. In each case, which embedding model gets selected when the flag is passed, and where is that decision made?",baseline,"The decision on which embedding model to use when the `--finetuned` flag is passed is made in two places: 
+
+1. In `scripts/index_self_repo.py`, where it checks if the `--finetuned` flag is present and uses the `config.finetuned_model_path` if so, otherwise using `config.model_name`.
+2. In `src/cse/agent/setup.py`, where it selects the embedding model based on the value of `options.finetuned`. If `options.finetuned` is True, it uses `config.finetuned_model_path`, otherwise it uses `config.model_name`.
+
+In both cases, the decision to use a fine-tuned or base model is made independently.",True,True,The candidate answer accurately reflects the information provided in the reference answer and evidence.
+11,multi_hop,"Which Qdrant collection do both CodingAgent and ToolCallingAgent search when answering questions about this repo, and why is it kept separate from the CoSQA collections?",baseline,"The Qdrant collection that both CodingAgent and ToolCallingAgent search when answering questions about this repo is config.qdrant.self_repo_collection (""self_repo"").
+
+This collection is kept separate from the CoSQA collections because they serve different purposes. The CoSQA collections (cosqa_full/cosqa_base/cosqa_finetuned) are reserved for embedding fine-tuning and retrieval evaluation, not for answering questions about this codebase. In contrast, the self_repo collection is specifically designed to store and retrieve information about this repository's own source.
+
+The reason for keeping these collections separate is that the agent itself searches the self_repo collection indexed from this repository's own source, whereas CoSQA is used solely for fine-tuning and evaluating the embedding model (retrieval metrics like MRR/nDCG/recall).",True,True,The candidate answer accurately reflects the key facts from the reference answer and evidence provided.
+17,conceptual,"What is the overall goal of this project, per ROADMAP.md?",baseline,"The overall goal of this project is to develop an ""agentic coding assistant"", which is an LLM that chooses tools (such as semantic search, read file, list directory, and grep) to navigate a codebase, measured against a one-shot baseline rather than assumed to be better. This project started as a RAG-based code search engine but has grown into this more comprehensive system.
+
+The code snippet from ROADMAP.md explains that the project is being developed in milestones (M0 and M1), with each milestone building upon the previous one. The ultimate goal is to create a production-shaped agentic coding assistant that can impress recruiters, offering both breadth and depth in its capabilities.",True,True,The candidate answer accurately reflects the key facts from the reference answer and ROADMAP.md context.
+18,conceptual,"What are the two agent strategies implemented for answering questions about a repo, and what's the core difference between them?",baseline,"The two agent strategies implemented for answering questions about a repo are CodingAgent and ToolCallingAgent. 
+
+CodingAgent runs a fixed plan->search->critique pipeline using only search_code, retrying with a reformulated query on failure. This approach is more deterministic but may not always lead to the best answer.
+
+On the other hand, ToolCallingAgent lets the LLM freely choose among search_code, read_file, list_directory and grep across multiple steps until it decides it can answer. This approach gives the model more flexibility but also increases the risk of getting stuck or returning irrelevant results.
+
+The core difference between these two strategies is that CodingAgent follows a predefined pipeline, while ToolCallingAgent allows the model to explore different options and choose the best path to an answer.",True,False,The candidate answer correctly identifies the two agent strategies and their core differences but introduces subjective evaluations not supported by the context.
+19,conceptual,Why does this project fine-tune the embedding model instead of just using the base sentence-transformer?,baseline,"The project fine-tunes the embedding model instead of just using the base sentence-transformer because it needs to adapt the model's weights to the specific task and dataset being used. In this case, the task is likely text classification or retrieval, and the dataset is the CoSQA dataset.
+
+By fine-tuning the model, the project can improve its performance on the specific task at hand by learning the patterns and relationships in the data that are relevant to the task. This is especially important when working with a large and complex dataset like CoSQA, where a pre-trained model may not capture all of the nuances and subtleties of the data.
+
+The fine-tuned model is saved to the `finetuned_model_path` specified in the configuration file (`config/main_config.yaml`). The project uses the `HuggingFaceEmbeddings` class from LangChain to load the pre-trained model, and then fine-tunes it using a custom optimizer and loss function (not shown in the provided code snippet).
+
+The fine-tuning process involves adjusting the weights of the pre-trained model to fit the specific task and dataset. This is done by minimizing a loss function that measures the difference between the predicted outputs and the actual labels or targets. The fine-tuned model is then used for text classification or retrieval tasks, where it can provide more accurate and relevant results than a pre-trained model.
+
+Here's an example of how the fine-tuning process might be implemented:
+```python
+# Load the pre-trained model
+model = HuggingFaceEmbeddings(model_name=""all-MiniLM-L6-v2"")
+
+# Define the custom optimizer and loss function
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
+loss_fn = torch.nn.MSELoss()
+
+# Fine-tune the model on the CoSQA dataset
+for epoch in range(10):
+    for batch in train_loader:
+        inputs, labels = batch
+        # Zero the gradients
+        optimizer.zero_grad()
+        
+        # Forward pass
+        outputs = model(inputs)
+        loss = loss_fn(outputs, labels)
+        
+        # Backward pass and optimization
+        loss.backward()
+        optimizer.step()
+    
+    # Print the loss at each epoch
+    print(f""Epoch {epoch+1}, Loss: {loss.item():.4f}"")
+```
+Note that this is just a simplified example, and the actual fine-tuning process may involve more complex optimizations and hyperparameter tuning.",True,False,"The candidate answer correctly explains why fine-tuning might be necessary but makes claims not grounded in the provided context, such as specific details about the optimizer, loss function, and training loop."
+1,lookup,What glob pattern does scripts/index_self_repo.py use when indexing this repository's own source code?,tool-loop,(agent did not produce an answer): Could not produce an answer within the step limit.,False,False,The candidate answer is missing and therefore cannot be compared to the reference or context provided.
+2,lookup,What are the default chunk_size and chunk_overlap used when splitting documents before indexing?,tool-loop,(agent did not produce an answer): Could not produce an answer within the step limit.,False,False,The candidate answer neither provides the correct chunk_size and chunk_overlap values nor explains why it could not find the information.
+3,lookup,What distance metric does the Qdrant collection use for vector similarity?,tool-loop,"The Qdrant collection uses the Cosine distance metric for vector similarity.
+
+This information was found in the `src/cse/search_engine/engine.py` file, specifically in the `upsert` method where it says ""Cosine distance (models.Distance.COSINE)"".",True,True,The candidate answer accurately states the distance metric used by Qdrant and cites the correct source code.
+9,multi_hop,"When the CLI is run with --agent tool-loop, which class ends up handling the user's query, and where is that choice made?",tool-loop,"To find out which class handles the user's query when the CLI is run with --agent tool-loop, we need to call the function ""search_code"" with the query ""When the CLI is run with --agent tool-loop, which class ends up handling the user?"" and look for the reference answer in Result 1 (source: data/eval/gold_qa.yaml).",False,False,The candidate answer does not correctly identify the class handling the user's query and provides incorrect information about where the choice is made.
+10,multi_hop,"Both indexing and agent setup support a --finetuned flag. In each case, which embedding model gets selected when the flag is passed, and where is that decision made?",tool-loop,(agent did not produce an answer): Could not produce an answer within the step limit.,False,False,The candidate answer is missing and does not provide any information to match or contradict the reference answer.
+11,multi_hop,"Which Qdrant collection do both CodingAgent and ToolCallingAgent search when answering questions about this repo, and why is it kept separate from the CoSQA collections?",tool-loop,(agent did not produce an answer): Could not produce an answer within the step limit.,False,False,The candidate answer did not provide a clear evaluation of the agent's performance or steps to address the issue within the step limit.
+17,conceptual,"What is the overall goal of this project, per ROADMAP.md?",tool-loop,(agent did not produce an answer): Could not produce an answer within the step limit.,False,False,The answer provided is not relevant to the question about the software repository and makes suggestions for improving an AI coding assistant's performance.
+18,conceptual,"What are the two agent strategies implemented for answering questions about a repo, and what's the core difference between them?",tool-loop,(agent did not produce an answer): Could not produce an answer within the step limit.,False,False,"The candidate answer does not provide any information about the two agent strategies or their differences, which are key facts from the reference answer and context."
+19,conceptual,Why does this project fine-tune the embedding model instead of just using the base sentence-transformer?,tool-loop,"The project fine-tunes the embedding model instead of just using the base sentence-transformer because it aims to improve retrieval over the base model. This is stated in the ROADMAP.md file.
+
+In more detail, the README.md file mentions that the LLM chooses which tools (search/read/list/grep) to call in a loop, and one of the options is to search using the fine-tuned embedding model instead of the base model. The --finetuned flag in the command line argument is used for this purpose.
+
+The fine-tuning process improves retrieval metrics like MRR, nDCG, and Recall on the CoSQA validation dataset.",True,False,"While the candidate answer correctly states that fine-tuning improves retrieval and mentions the --finetuned flag in README.md, it introduces claims not supported by the context, such as the LLM choosing tools in a loop."
